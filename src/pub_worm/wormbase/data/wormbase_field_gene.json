@@ -1,0 +1,15 @@
+{
+"references": {
+    "references_list": { 
+        "ROOT"    : ["fields", "references", "data", "results"],
+        "year"    : ["year"],
+        "journal" : ["journal"],
+        "title"   : ["title"],
+        "author"  : {
+            "ROOT": ["author"],
+            "CONCAT": ["label"]
+        }
+        
+    }
+  }
+}

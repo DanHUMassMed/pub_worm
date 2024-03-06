@@ -1,0 +1,56 @@
+{
+"overview": {
+    "description"    : ["fields", "concise_description","data","text"],
+    "wormbase_id"    : ["fields", "name", "data", "id"],
+    "gene_name"      : ["fields", "name", "data", "label"],
+    "sequence_name"  : ["fields", "sequence_name", "data"],
+    "classification" : ["fields", "classification", "data", "type"],
+    "gene_class"     : ["fields", "gene_class", "data", "tag", "id"],
+    "status"         : ["fields", "status", "data"],
+    "operon"         : ["fields", "operon", "data", "id"],
+    "other_names"    : ["fields", "other_names", "data"]
+  },
+"sequences": { },
+"gene_ontology": {
+    "gene_ontology_summary" : {
+      "ROOT" : ["fields", "gene_ontology_summary", "data"],
+      "Molecular_function": {
+          "ROOT" : ["Molecular_function"],
+          "go_term" : {
+            "ROOT":["term_description"],
+            "name" : ["label"],
+            "id": ["id"]
+          }
+      },
+      "Cellular_component": {
+        "ROOT" : ["Cellular_component"],
+        "go_term" : {
+          "ROOT":["term_description"],
+          "name" : ["label"],
+          "id": ["id"]
+        }
+    },
+    "Biological_process": {
+          "ROOT" : ["Biological_process"],
+              "go_term" : {
+                "ROOT":["term_description"],
+                "name" : ["label"],
+                "id": ["id"]
+              }
+        }
+    }
+},
+"references": {
+    "references_list": { 
+        "ROOT"    : ["fields", "references", "data", "results"],
+        "year"    : ["year"],
+        "journal" : ["journal"],
+        "title"   : ["title"],
+        "author"  : {
+            "ROOT": ["author"],
+            "CONCAT": ["label"]
+        }
+        
+    }
+  }
+}
