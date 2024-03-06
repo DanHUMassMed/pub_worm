@@ -16,16 +16,3 @@ def ontology_to_csv(json_obj,file_name='ontology.csv'):
     df.columns=["Category","Name","Id"]
     df.to_csv(file_name, index=False)
     return rows
-
-with open("result.json", 'r') as file:
-    json_data = json.load(file)
-
-
-rows = ontology_to_csv(json_data['gene_ontology_summary'])
-
-print("*"*20)
-print(len(rows))
-for row in rows:
-    print(row)
-
-#print(json.dumps(json_data['gene_ontology_summary'], indent=4))

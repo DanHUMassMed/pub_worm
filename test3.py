@@ -1,42 +1,28 @@
+from pub_worm.wormbase.wormbase_api import WormbaseAPI
+from pub_worm.wormbase.to_csv_helpers import ontology_to_csv
 import pandas as pd
 import json
 
-# JSON data
-json_data = [
-    {
-        "year": "2021",
-        "journal": "Nat Commun",
-        "title": "PDZD-8 and TEX-2 regulate endosomal PI(4,5)P 2 homeostasis via lipid transport to promote embryogenesis in C. elegans",
-        "author": "Jeyasimman D|Ercan B|Dharmawan D|Naito T|Sun J|Saheki Y"
-    },
-    {
-        "year": "2023",
-        "journal": "PLoS Biol",
-        "title": "The active zone protein Clarinet regulates synaptic sorting of ATG-9 and presynaptic autophagy.",
-        "author": "Xuan Z|Yang S|Clark B|Hill SE|Manning L|Colon-Ramos DA"
-    },
-    {
-        "year": "1980",
-        "journal": "Genetics",
-        "title": "The genetics of levamisole resistance in the nematode Caenorhabditis elegans.",
-        "author": "Lewis JA|Wu CH|Berg H|Levine JH"
-    },
-    {
-        "year": "2021",
-        "journal": "International Worm Meeting",
-        "title": "pOpsicle: An all-optical reporter system for synaptic vesicle recycling using pH-sensitive fluorescent proteins",
-        "author": "Seidenthal, Marius|Janosi, Barbara|Zhao, Xhinda|Willoughby, Miles|Liewald, Jana F.|Ding, Jimmy|Peng, Lucinda|Lu, Hang|Gottschalk, Alexander"
-    }
-]
+if __name__ == "__main__":
+    #wormbase_ids = ["WBGene00006763","WBGene00006764","WBGene00006765"]
+    wormbase_ids = ["WBGene00006763"]
+    wormbaseAPI = WormbaseAPI()
+    for wormbase_id in wormbase_ids:
+        #call_type = "field"
+        call_type = "widget"
+        call_class = "gene"
+        #data_request = 'references'
+        #data_request = 'overview'
+        data_request = 'gene_ontology'
+        method_params = {}
+        method_params['object_id']=wormbase_id
+        method_params['data_request']=data_request
+        method_params['call_type']=call_type
+        method_params['call_class']=call_class
+        ret_data = wormbaseAPI.get_wormbase_data(method_params)
 
-# Convert JSON to DataFrame
-df = pd.DataFrame(json_data)
-
-# Split the 'author' column by '|'
-#df['author'] = df['author'].str.split('|')
-
-# Explode the 'author' column to separate rows for each author
-df = df.explode('author')
-
-# Save DataFrame to CSV
-df.to_csv('output.csv', index=False)
+        pretty_data = json.dumps(ret_data, indent=4)
+        print(pretty_data)
+        with open('result.json', 'w') as file:
+                file.write(pretty_data)
+        ontology_to_csv(ret_data['gene_ontology_summary'])

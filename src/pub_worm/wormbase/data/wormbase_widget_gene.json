@@ -16,7 +16,7 @@
       "ROOT" : ["fields", "gene_ontology_summary", "data"],
       "Molecular_function": {
           "ROOT" : ["Molecular_function"],
-          "go_term" : {
+          "SKIP" : {
             "ROOT":["term_description"],
             "name" : ["label"],
             "id": ["id"]
@@ -24,7 +24,7 @@
       },
       "Cellular_component": {
         "ROOT" : ["Cellular_component"],
-        "go_term" : {
+        "SKIP" : {
           "ROOT":["term_description"],
           "name" : ["label"],
           "id": ["id"]
@@ -32,7 +32,7 @@
     },
     "Biological_process": {
           "ROOT" : ["Biological_process"],
-              "go_term" : {
+              "SKIP" : {
                 "ROOT":["term_description"],
                 "name" : ["label"],
                 "id": ["id"]

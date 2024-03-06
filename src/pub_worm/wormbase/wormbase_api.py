@@ -3,7 +3,6 @@ WormbaseREST REST API for http://rest.wormbase.org/index.html
 '''
 import time
 import json
-import pandas as pd
 import urllib.request
 import logging
 import logging.config
@@ -84,6 +83,16 @@ class WormbaseAPI:
                 return [self.extract_single_element_lists(item) for item in json_obj]
         return json_obj
 
+    def extract_skip_elements(self, json_obj):
+        if isinstance(json_obj, dict):
+            for key, value in json_obj.items():
+                if key == "SKIP":
+                    json_obj = self.extract_skip_elements(value)
+                else:
+                    json_obj[key] = self.extract_skip_elements(value)
+        elif isinstance(json_obj, list):
+            return [self.extract_skip_elements(item) for item in json_obj]
+        return json_obj
 
     def get_wormbase_data(self, method_params):
         call_type = method_params["call_type"]
@@ -117,15 +126,15 @@ class WormbaseAPI:
                     if widget_item is not None:
                         results_dict[data_request_item_nm] = widget_item
                 elif isinstance(data_request_item, dict):
-                    logger.debug(f"BEFORE {data_request_item=}, {data_request_item['ROOT']=}")
-                    pretty_data = json.dumps(data_to_process, indent=4)
+                    #logger.debug(f"BEFORE {data_request_item=}, {data_request_item['ROOT']=}")
+                    #pretty_data = json.dumps(data_to_process, indent=4)
                     #logger.debug(f"BEFORE {pretty_data}")
                     sub_data_to_process = get_json(data_to_process, data_request_item["ROOT"])
                     if sub_data_to_process is None:
                         logger.debug(f"AFTER WTF")
 
                     if sub_data_to_process is not None:
-                        pretty_data = json.dumps(sub_data_to_process, indent=4)
+                        #pretty_data = json.dumps(sub_data_to_process, indent=4)
                         #logger.debug(f"AFTER {pretty_data}")
                         if "CONCAT" in data_request_item:
                             sub_results_str = ""
@@ -144,39 +153,18 @@ class WormbaseAPI:
                             else: #It is a list
                                 sub_results_list = []
                                 for sub_data_item in sub_data_to_process:
-                                    logger.debug(f"ITS a LIST {sub_data_item}")
-                                    sub_results_list.append(parse_data(sub_data_item, data_request_item, {}))
+                                    list_item_to_append = parse_data(sub_data_item, data_request_item, {})
+                                    logger.debug(f"LIST ITEM {list_item_to_append=}")
+                                    sub_results_list.append(list_item_to_append)
                                 results_dict[data_request_item_nm] = sub_results_list
 
                 else:
                     logger.debug("!!"*40)
 
+            # Post processing
+            results_dict = self.extract_skip_elements(results_dict)
             results_dict = self.extract_single_element_lists(results_dict)
             return results_dict
             
         ret_dict = parse_data(rest_api_call_results, results_doc_definition, ret_dict)
         return ret_dict
-
-if __name__ == "__main__":
-    #wormbase_ids = ["WBGene00006763","WBGene00006764","WBGene00006765"]
-    wormbase_ids = ["WBGene00006763"]
-    wormbaseAPI = WormbaseAPI()
-    for wormbase_id in wormbase_ids:
-        call_type = "field"
-        call_class = "gene"
-        data_request = 'references'
-        #data_request = 'overview'
-        #data_request = 'gene_ontology'
-        method_params = {}
-        method_params['object_id']=wormbase_id
-        method_params['data_request']=data_request
-        method_params['call_type']=call_type
-        method_params['call_class']=call_class
-        ret_data = wormbaseAPI.get_wormbase_data(method_params)
-
-        pretty_data = json.dumps(ret_data, indent=4)
-        print(pretty_data)
-        with open('result.json', 'w') as file:
-                file.write(pretty_data)
-    #df = pd.json_normalize(pretty_data['gene_ontology_summary'])
-    #df.to_csv('output.csv', index=False)
