@@ -13,5 +13,12 @@
         }
         
     }
+  },
+  "phenotype": {
+    "phenotype_list": { 
+        "ROOT" : ["phenotype", "data"],
+        "name" : ["phenotype","label"],
+        "id"   : ["phenotype", "id"]
+    }
   }
 }

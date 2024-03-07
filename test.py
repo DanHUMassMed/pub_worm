@@ -1,134 +1,32 @@
-import json
+# Read references.csv
+# Use WBPaper00064006 ids
+# Call WormbaseAPI and get pubmed_ids
+# Write the results back to references.csv
+from pub_worm.wormbase.wormbase_api import WormbaseAPI
+from pub_worm.wormbase.to_csv_helpers import ontology_to_csv, refereneces_to_csv
+import pandas as pd
 
-# def iterate_json(json_obj, parent_key=None):
-#     if isinstance(json_obj, dict):
-#         for key, value in json_obj.items():
-#             if parent_key:
-#                 current_key = f"{parent_key}.{key}"
-#             else:
-#                 current_key = key
-#             if isinstance(value, (dict, list)):
-#                 iterate_json(value, current_key)
-#             else:
-#                 print(f"Key: {current_key}, Value: {value}")
-#     elif isinstance(json_obj, list):
-#         for index, item in enumerate(json_obj):
-#             if isinstance(item, (dict, list)):
-#                 iterate_json(item, f"{parent_key}[{index}]")
-#             else:
-#                 print(f"Key: {parent_key}[{index}], Value: {item}")
 
-def process_dict_item(dict_item):
-    header = []
-    row_data = []
-    for index, key in enumerate(dict_item.keys()):
-        # header_nm += key
-        # if len(dict_item.keys())>1 and index<len(dict_item.keys()-1):
-        #     header +="."
-        value = dict_item[key]
-        if isinstance(value, list):
-            data = process_list_item(value)
-        elif isinstance(value, dict):
-            pass
-        else:
-            data = value
-
-        header.append(key)
-        row_data.append(data)
-
-    return header, data
-
-def process_list_item(items):
-    ret_val = ""
-    for index, item in enumerate(items):
-        
-        ret_val += item
-        if len(items)>1 and index<len(items-1):
-            ret_val +=" | "
+def assign_pubmed_id(row):
+    wormbase_api = WormbaseAPI()
+    method_params = {}
+    method_params['object_id']=row['id']
+    method_params['data_request']='pmid'
+    method_params['call_type']='field'
+    method_params['call_class']='paper'
+    pmid_json =  wormbase_api.get_wormbase_data(method_params)
+    print(pmid_json)
+    ret_val = 'NA'
+    if 'pmid' in pmid_json:
+        ret_val = pmid_json['pmid']
     return ret_val
 
+df = pd.read_csv('references.csv')
+print(df.head())
+df['pmid'] = df.apply(assign_pubmed_id, axis=1)
+df = df[['pmid','id','journal','year','title','author','abstract']]
+df.to_csv('output.csv', index=False)
 
-def flatten_json_list(json_obj):
-    header= []
-    data = []
-    if isinstance(json_obj, list):
-        for list_item in json_obj:
-            #create row
-            row_header= []
-            row_data = []
-            if isinstance(list_item, dict):
-                header, data =process_dict_item(list_item)
-            elif isinstance(list_item, list):
-                header,data = process_list_item(list_item)
-
-
-
-        
-
-    
-with open("result.json", 'r') as file:
-    json_data = json.load(file)
-
-{
-    "references_list": [
-        {
-            "year": "2018",
-            "journal": [
-                "G3 (Bethesda)"
-            ],
-            "title": [
-                "Systematic Functional Characterization of Human 21st Chromosome Orthologs in Caenorhabditis elegans."
-            ],
-            "author": [
-                {
-                    "name": "Nordquist SK"
-                },
-                {
-                    "name": "Smith SR"
-                },
-                {
-                    "name": "Pierce JT"
-                }
-            ]
-        },
-        {
-            "year": "2003",
-            "journal": [
-                "Neuron"
-            ],
-            "title": [
-                "Endophilin is required for synaptic vesicle endocytosis by localizing synaptojanin."
-            ],
-            "author": [
-                {
-                    "name": "Schuske KR"
-                },
-                {
-                    "name": "Richmond JE"
-                },
-                {
-                    "name": "Matthies DS"
-                },
-                {
-                    "name": "Davis WS"
-                },
-                {
-                    "name": "Runz S"
-                },
-                {
-                    "name": "Rube DA"
-                },
-                {
-                    "name": "Van der Bliek AM"
-                },
-                {
-                    "name": "Jorgensen EM"
-                }
-            ]
-        }
-]
-}
-
-
-# Start the iteration
-flatten_json_list(json_data["references_list"])
+# wormbase_api = WormbaseAPI()
+# ret_val = wormbase_api.get_wormbase_data({'object_id': 'WBPaper00064006', 'data_request': 'pmid', 'call_type': 'field', 'call_class': 'paper'})
+# print(ret_val)

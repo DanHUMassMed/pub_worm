@@ -1,31 +1,13 @@
 import json
-import pandas as pd
+from pub_worm.ncbi.entreze_api import EntrezAPI
 
-def ontology_to_csv(json_obj,file_name='ontology.csv'):
-    rows = []
-    row = []
-    for key1, value1 in json_obj.items():
-        row = [key1]
-        for list_value in value1:
-            for key2, value2 in list_value.items():
-                row.append(value2)
-            rows.append(row)
-            row = [key1]
+entrez_api = EntrezAPI()
+method_params = {}
+method_params['function']='esearch'
+method_params['db']='pubmed'
+method_params['term']='science[journal] AND breast cancer AND 2008[pdat]'
 
-    df = pd.DataFrame(rows)
-    df.columns=["Category","Name","Id"]
-    df.to_csv(file_name, index=False)
-    return rows
+ret_data = entrez_api.get_ncbi_data(method_params)
+pretty_data = json.dumps(ret_data, indent=4)
+print(pretty_data)
 
-with open("result.json", 'r') as file:
-    json_data = json.load(file)
-
-
-rows = ontology_to_csv(json_data['gene_ontology_summary'])
-
-print("*"*20)
-print(len(rows))
-for row in rows:
-    print(row)
-
-#print(json.dumps(json_data['gene_ontology_summary'], indent=4))

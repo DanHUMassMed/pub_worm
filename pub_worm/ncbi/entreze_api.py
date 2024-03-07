@@ -1,26 +1,31 @@
 '''
-WormbaseREST REST API for http://rest.wormbase.org/index.html
+NCBI REST API for https://eutils.ncbi.nlm.nih.gov/entrez/eutils
 '''
 import time
 import json
 import urllib.request
+import urllib.parse
 import logging
 import logging.config
-from pub_worm.wormbase import load_wormbase_api_json
 
 logging.config.fileConfig('logging.config')
 # Create a logger object
 logger = logging.getLogger(__name__)
 
-class WormbaseAPI:
+class EntrezAPI:
 
     def __init__(self):
-        self.base_url_str = f"https://wormbase.org/rest"
+        self.base_url_str = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
+        self.max_retries = 3
+        
 
-    def rest_api_call(self, call_type, call_class, object_id, data_request):
-        url_str = f"{self.base_url_str}/{call_type}/{call_class}/{object_id}/{data_request}"
+    def rest_api_call(self, function_call, params):
+        url_str = f"{self.base_url_str}/{function_call}.fcgi"
+        params['retmode']='json'
+        query = '&'.join([f"{urllib.parse.quote(k, 'utf-8')}={urllib.parse.quote(v, 'utf-8')}" for k, v in params.items()])
+        url_str = f"{url_str}?{query}"
+        logger.debug(url_str)
 
-        max_retries = 3
         retry = 0
         done = False
 
@@ -30,24 +35,30 @@ class WormbaseAPI:
         def handle_error(error_msg):
             print(error_msg)
             nonlocal done, retry, api_error
-            if retry >= max_retries:
+            retry +=1
+            if retry >= self.max_retries:
                 done = True
                 api_error = error_msg
 
         while not done:
             try:
                 url = urllib.request.urlopen(url_str)
-                if url.getcode() == 429:
-                    handle_error(f"eUtilsGet: Request limiter hit. [Retry: {retry + 1}] code: {url.getcode()}")
-                    time.sleep(2)
-                elif url.getcode() == 200:
+                if url.getcode() == 200:
                     done = True
                     response_text = url.read().decode('utf-8')
                     api_result = json.loads(response_text)
+                elif url.getcode() == 429:
+                    handle_error(f"Request limiter hit. waiting 2 seconds [Retry: {retry + 1}] code: {url.getcode()}")
+                    time.sleep(2)
                 else:
-                    handle_error(f"restAPICall- Failed to retrieve data. | Retry- {retry + 1} | Response code- {url.getcode()}")
+                    handle_error(f"Failed to retrieve data. | Retry- {retry +1} | Response code- {url.getcode()}")
             except Exception as ex:
-                handle_error(f"restAPICall- Check if you have a connection!! | Retry- {retry + 1} | Response msg- {str(ex)}")
+                if isinstance(ex, urllib.error.HTTPError):
+                    if ex.code == 500:
+                        error_msg=f"Check the format of the http request [Retry: {retry + 1}] code: {str(ex)}"
+                else:
+                    error_msg=f"Check if you have a connection!! | Retry- {retry+1} | Response msg- {str(ex)}"
+                handle_error(error_msg)
 
         if api_result is None:
             api_result = {"rest_api_error": api_error}
@@ -57,8 +68,7 @@ class WormbaseAPI:
             with open('http_response.json', 'w') as file:
                 file.write(pretty_data)
             #logger.debug(pretty_data)
-            
-
+                
         return api_result
 
     def get_json_element(self, json_data, path):
@@ -94,26 +104,25 @@ class WormbaseAPI:
             return [self.extract_skip_elements(item) for item in json_obj]
         return json_obj
 
-    def get_wormbase_data(self, method_params):
-        call_type = method_params["call_type"]
-        call_class = method_params["call_class"]
-        object_id = method_params["object_id"]
-        data_request = method_params["data_request"]
-        get_json = self.get_json_element
+    def get_ncbi_data(self, method_params):
+        api_params = {}
 
-        if object_id is None:
-            raise Exception("objectID cannot be null!")
+        api_params['db']  = method_params['db']
+        api_params['term']= method_params['term']
+        function_call = method_params['function']
+              
+        get_json = self.get_json_element
     
-        rest_api_call_results = self.rest_api_call(call_type, call_class, object_id, data_request)
+        rest_api_call_results = self.rest_api_call(function_call, api_params)
         if "rest_api_error" in rest_api_call_results:
-            return ret_dict
+            return rest_api_call_results
 
         ret_dict = {}
-        wormbase_api_json = load_wormbase_api_json(call_type, call_class)
-        if data_request not in wormbase_api_json:
-            logger.error(f"No wormbase connfig for {data_request=}")
-            return {}
-        results_doc_definition = wormbase_api_json[data_request]
+        # wormbase_api_json = load_wormbase_api_json(call_type, call_class)
+        # if data_request not in wormbase_api_json:
+        #     logger.error(f"No wormbase connfig for {data_request=}")
+        #     return {}
+        # results_doc_definition = wormbase_api_json[data_request]
 
         def parse_data(data_to_process, doc_definition, results_dict):
             # data_request_item_nm="description" data_request_item=["fields", "concise_description","data","text"]
@@ -166,5 +175,5 @@ class WormbaseAPI:
             results_dict = self.extract_single_element_lists(results_dict)
             return results_dict
             
-        ret_dict = parse_data(rest_api_call_results, results_doc_definition, ret_dict)
+        #ret_dict = parse_data(rest_api_call_results, results_doc_definition, ret_dict)
         return ret_dict
