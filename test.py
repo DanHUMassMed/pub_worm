@@ -1,32 +1,63 @@
-# Read references.csv
-# Use WBPaper00064006 ids
-# Call WormbaseAPI and get pubmed_ids
-# Write the results back to references.csv
-from pub_worm.wormbase.wormbase_api import WormbaseAPI
-from pub_worm.wormbase.to_csv_helpers import ontology_to_csv, refereneces_to_csv
-import pandas as pd
+def remove_empty_dicts(obj):
+    if isinstance(obj, dict):
+        return {k: remove_empty_dicts(v) for k, v in obj.items() if v and remove_empty_dicts(v)}
+    elif isinstance(obj, list):
+        return [remove_empty_dicts(v) for v in obj if v and remove_empty_dicts(v)]
+    else:
+        return obj
 
+# Your JSON data
+json_data = {
+    "gene_ontology_summary": {
+        "Molecular_function": [
+            {
+                "name": "DNA-binding transcription factor activity, RNA polymerase II-specific",
+                "id": "GO:0000981"
+            },
+            {
+                "name": "DNA-binding transcription factor activity",
+                "id": "GO:0003700"
+            }
+        ],
+        "Cellular_component": [
+            {
+                "name": "nucleus",
+                "id": "GO:0005634"
+            },
+            {}
+        ],
+        "Biological_process": [
+            {
+                "name": "defense response to Gram-negative bacterium",
+                "id": "GO:0050829"
+            },
+            {
+                "name": "male mating behavior",
+                "id": "GO:0060179"
+            },
+            [
+                {
+                    "name": "regulation of gene expression",
+                    "id": "GO:0010468"
+                },
+                {}
+            ],
+            [
+                {
+                    "name": "positive regulation of transcription by RNA polymerase II",
+                    "id": "GO:0045944"
+                },
+                {}
+            ],
+            {
+                "name": "serotonin biosynthetic process",
+                "id": "GO:0042427"
+            }
+        ]
+    }
+}
 
-def assign_pubmed_id(row):
-    wormbase_api = WormbaseAPI()
-    method_params = {}
-    method_params['object_id']=row['id']
-    method_params['data_request']='pmid'
-    method_params['call_type']='field'
-    method_params['call_class']='paper'
-    pmid_json =  wormbase_api.get_wormbase_data(method_params)
-    print(pmid_json)
-    ret_val = 'NA'
-    if 'pmid' in pmid_json:
-        ret_val = pmid_json['pmid']
-    return ret_val
-
-df = pd.read_csv('references.csv')
-print(df.head())
-df['pmid'] = df.apply(assign_pubmed_id, axis=1)
-df = df[['pmid','id','journal','year','title','author','abstract']]
-df.to_csv('output.csv', index=False)
-
-# wormbase_api = WormbaseAPI()
-# ret_val = wormbase_api.get_wormbase_data({'object_id': 'WBPaper00064006', 'data_request': 'pmid', 'call_type': 'field', 'call_class': 'paper'})
-# print(ret_val)
+# Remove empty dictionaries
+json_data={}
+cleaned_json = remove_empty_dicts(json_data)
+print(cleaned_json)

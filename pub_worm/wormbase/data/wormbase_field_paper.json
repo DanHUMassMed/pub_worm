@@ -1,5 +1,8 @@
 {
 "pmid": {
     "pmid" : ["pmid", "data"]
+},
+"abstract": {
+    "abstract" : ["abstract", "data"]
 }
 }

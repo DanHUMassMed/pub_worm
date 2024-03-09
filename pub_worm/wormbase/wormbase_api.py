@@ -6,21 +6,34 @@ import json
 import urllib.request
 import logging
 import logging.config
-from pub_worm.wormbase import load_wormbase_api_json
+from . import load_wormbase_api_json
 
-logging.config.fileConfig('logging.config')
+try:
+    logging.config.fileConfig('logging.config')
+except Exception:
+    logging.basicConfig(level=logging.INFO)  # Example default logging configuration
+
 # Create a logger object
 logger = logging.getLogger(__name__)
 
 class WormbaseAPI:
 
-    def __init__(self):
-        self.base_url_str = f"https://wormbase.org/rest"
+    def __init__(self,call_type, call_class, data_request):
+        self.base_url_str = "https://wormbase.org/rest"
         self.max_retries = 3
+        self.call_type = call_type
+        self.call_class = call_class
+        self.data_request = data_request
+        self.wormbase_api_json = load_wormbase_api_json(call_type, call_class)
+        if data_request not in self.wormbase_api_json:
+            logger.error(f"No wormbase connfig for {data_request=}")
+            self.results_doc_definition = {}
+        else:
+            self.results_doc_definition = self.wormbase_api_json[data_request]
         
 
-    def rest_api_call(self, call_type, call_class, object_id, data_request):
-        url_str = f"{self.base_url_str}/{call_type}/{call_class}/{object_id}/{data_request}"
+    def rest_api_call(self, object_id):
+        url_str = f"{self.base_url_str}/{self.call_type}/{self.call_class}/{object_id}/{self.data_request}"
         retry = 0
         done = False
 
@@ -76,6 +89,16 @@ class WormbaseAPI:
         return result
 
 
+    def extract_empty_dict(self, json_obj):
+        if isinstance(json_obj, dict):
+            return {k: self.extract_empty_dict(v) for k, v in json_obj.items() if v and self.extract_empty_dict(v)}
+        elif isinstance(json_obj, list):
+            return [self.extract_empty_dict(v) for v in json_obj if v and self.extract_empty_dict(v)]
+        else:
+            return json_obj
+    
+    
+
     def extract_single_element_lists(self, json_obj):
         if isinstance(json_obj, dict):
             for key, value in json_obj.items():
@@ -99,26 +122,21 @@ class WormbaseAPI:
             return [self.extract_skip_elements(item) for item in json_obj]
         return json_obj
 
-    def get_wormbase_data(self, method_params):
-        call_type = method_params["call_type"]
-        call_class = method_params["call_class"]
-        object_id = method_params["object_id"]
-        data_request = method_params["data_request"]
+    def get_wormbase_data(self, object_id, map_result=True):
+        # Just used to shorten the call length to make code more readable
         get_json = self.get_json_element
 
         if object_id is None:
             raise Exception("objectID cannot be null!")
     
-        rest_api_call_results = self.rest_api_call(call_type, call_class, object_id, data_request)
+        rest_api_call_results = self.rest_api_call(object_id)
         if "rest_api_error" in rest_api_call_results:
+            return rest_api_call_results
+        
+        if not map_result:
             return rest_api_call_results
 
         ret_dict = {}
-        wormbase_api_json = load_wormbase_api_json(call_type, call_class)
-        if data_request not in wormbase_api_json:
-            logger.error(f"No wormbase connfig for {data_request=}")
-            return {}
-        results_doc_definition = wormbase_api_json[data_request]
 
         def parse_data(data_to_process, doc_definition, results_dict):
             # data_request_item_nm="description" data_request_item=["fields", "concise_description","data","text"]
@@ -167,9 +185,10 @@ class WormbaseAPI:
                     logger.debug("!!"*40)
 
             # Post processing
+            results_dict = self.extract_empty_dict(results_dict)
             results_dict = self.extract_skip_elements(results_dict)
             results_dict = self.extract_single_element_lists(results_dict)
             return results_dict
             
-        ret_dict = parse_data(rest_api_call_results, results_doc_definition, ret_dict)
+        ret_dict = parse_data(rest_api_call_results, self.results_doc_definition, ret_dict)
         return ret_dict

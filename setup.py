@@ -1,7 +1,7 @@
 """
 Setup for pypi releases of pub_worm
 """
-from setuptools import setup
+from setuptools import setup, find_packages
 from pathlib import Path
 
 # rm -rf dist
@@ -15,7 +15,7 @@ this_directory = Path(__file__).parent
 long_description = (this_directory / "README.md").read_text()
 
 setup(name='pub_worm',
-      version='0.0.1',
+      version='0.1.5',
       description='Wormbase/PudMed API Access',
       long_description_content_type="text/markdown",
       long_description=long_description,
@@ -25,10 +25,7 @@ setup(name='pub_worm',
       author_email='daniel.higgins@yahoo.com',
       license='MIT',
 
-      packages=['wormcat_batch'],
-      install_requires=['pandas','xlrd','openpyxl','xlsxwriter'],
-      entry_points={
-          'console_scripts': ['wormcat_cli=wormcat_batch.run_wormcat_batch:main'],
-      },
+      packages=find_packages(),
+      install_requires=['pandas'],
       include_package_data=True,
       zip_safe=False)

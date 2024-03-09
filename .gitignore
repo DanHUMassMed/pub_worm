@@ -11,4 +11,6 @@ http_response.json
 .DS_Store
 
 redis-stable/
+dist/
+*.egg-info/
 

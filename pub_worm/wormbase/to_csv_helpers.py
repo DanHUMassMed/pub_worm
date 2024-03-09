@@ -1,7 +1,7 @@
 import json
 import pandas as pd
 
-def ontology_to_csv(json_obj,file_name='ontology.csv'):
+def ontology_to_csv(json_obj, file_name='ontology.csv'):
     rows = []
     row = []
     for key1, value1 in json_obj.items():
@@ -17,7 +17,7 @@ def ontology_to_csv(json_obj,file_name='ontology.csv'):
     df.to_csv(file_name, index=False)
     return rows
 
-def refereneces_to_csv(json_obj,file_name='references.csv'):
+def refereneces_to_csv(json_obj, file_name='references.csv'):
     df = pd.DataFrame(json_obj)
     #df.columns=["Category","Name","Id"]
     df.to_csv(file_name, index=False)

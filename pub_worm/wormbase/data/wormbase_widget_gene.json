@@ -10,7 +10,6 @@
     "operon"         : ["fields", "operon", "data", "id"],
     "other_names"    : ["fields", "other_names", "data"]
   },
-"sequences": { },
 "gene_ontology": {
     "gene_ontology_summary" : {
       "ROOT" : ["fields", "gene_ontology_summary", "data"],
