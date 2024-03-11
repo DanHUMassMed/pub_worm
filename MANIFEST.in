@@ -3,3 +3,6 @@ include pub_worm/impact_factor/data/2022_JCR_IF.csv
 include pub_worm/wormbase/data/wormbase_field_gene.json
 include pub_worm/wormbase/data/wormbase_field_paper.json
 include pub_worm/wormbase/data/wormbase_widget_gene.json
+include pub_worm/ncbi/data/ncbi_esummary.json
+include pub_worm/ncbi/data/ncbi_esearch.json
+include pub_worm/ncbi/data/ncbi_efetch.json

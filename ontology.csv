@@ -1,30 +1,14 @@
 Category,Name,Id
-Molecular_function,"phosphatidylinositol-4,5-bisphosphate 5-phosphatase activity",GO:0004439
-Molecular_function,phosphatase activity,GO:0016791
-Molecular_function,hydrolase activity,GO:0016787
-Molecular_function,"phosphatidylinositol-3,5-bisphosphate 5-phosphatase activity",GO:0043813
-Cellular_component,synaptic vesicle,GO:0008021
-Cellular_component,synapse,GO:0045202
-Cellular_component,cytoplasmic vesicle,GO:0031410
-Biological_process,synaptic vesicle budding from presynaptic endocytic zone membrane,GO:0016185
-Biological_process,vesicle organization,GO:0016050
-Biological_process,synaptic vesicle transport,GO:0048489
-Biological_process,phosphatidylinositol-3-phosphate biosynthetic process,GO:0036092
-Biological_process,positive regulation of muscle contraction,GO:0045933
-Biological_process,Golgi vesicle uncoating,GO:0048212
-Biological_process,protein localization to synapse,GO:0035418
-Biological_process,locomotion,GO:0040011
-Biological_process,phosphatidylinositol dephosphorylation,GO:0046856
-Biological_process,acetylcholine transport,GO:0015870
-Biological_process,endocytosis,GO:0006897
-Biological_process,regulation of backward locomotion,GO:0043058
-Biological_process,regulation of forward locomotion,GO:0043059
-Biological_process,necroptotic process,GO:0070266
-Biological_process,synaptic vesicle endocytosis,GO:0048488
-Biological_process,synaptic vesicle uncoating,GO:0016191
-Biological_process,gamma-aminobutyric acid transport,GO:0015812
-Biological_process,muscle contraction,GO:0006936
-Biological_process,positive regulation of neurotransmitter secretion,GO:0001956
-Biological_process,cytoskeleton organization,GO:0007010
-Biological_process,endosome organization,GO:0007032
-Biological_process,positive regulation of multicellular organism growth,GO:0040018
+Molecular_function,GO:0000981,"DNA-binding transcription factor activity, RNA polymerase II-specific"
+Molecular_function,GO:0000978,RNA polymerase II cis-regulatory region sequence-specific DNA binding
+Molecular_function,GO:0003677,DNA binding
+Molecular_function,GO:0003700,DNA-binding transcription factor activity
+Cellular_component,GO:0005634,nucleus
+Biological_process,GO:0050829,defense response to Gram-negative bacterium
+Biological_process,GO:0006357,regulation of transcription by RNA polymerase II
+Biological_process,GO:0060179,male mating behavior
+Biological_process,GO:0010468,regulation of gene expression
+Biological_process,GO:0045944,positive regulation of transcription by RNA polymerase II
+Biological_process,GO:0030182,neuron differentiation
+Biological_process,GO:0006355,regulation of DNA-templated transcription
+Biological_process,GO:0042427,serotonin biosynthetic process

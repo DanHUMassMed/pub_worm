@@ -63,7 +63,7 @@ class WormbaseAPI:
             except Exception as ex:
                 if isinstance(ex, urllib.error.HTTPError):
                     if ex.code == 500:
-                        error_msg=f"Check the format of the http request [Retry: {retry + 1}] code: {str(ex)}"
+                        error_msg=f"Check the format of the http request [Retry: {retry + 1}]\nurl:{url_str}\ncode: {str(ex)}"
                 else:
                     error_msg=f"Check if you have a connection!! | Retry- {retry+1} | Response msg- {str(ex)}"
                 handle_error(error_msg)

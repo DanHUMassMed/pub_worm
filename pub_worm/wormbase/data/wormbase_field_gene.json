@@ -14,6 +14,35 @@
         
     }
   },
+  "gene_ontology_summary" : {
+    "gene_ontology_summary" :{
+      "ROOT" : ["gene_ontology_summary", "data"],
+      "Molecular_function": {
+          "ROOT" : ["Molecular_function"],
+          "SKIP" : {
+            "ROOT":["term_description"],
+            "name" : ["label"],
+            "id": ["id"]
+          }
+      },
+      "Cellular_component": {
+        "ROOT" : ["Cellular_component"],
+        "SKIP" : {
+          "ROOT":["term_description"],
+          "name" : ["label"],
+          "id": ["id"]
+        }
+    },
+    "Biological_process": {
+          "ROOT" : ["Biological_process"],
+              "SKIP" : {
+                "ROOT":["term_description"],
+                "name" : ["label"],
+                "id": ["id"]
+              }
+        }
+      }
+  },
   "phenotype": {
     "phenotype_list": { 
         "ROOT" : ["phenotype", "data"],

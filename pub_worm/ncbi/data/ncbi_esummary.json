@@ -1,0 +1,8 @@
+{
+  "paper_summary": {
+        "source"     : ["result","$UID","source"],
+        "lastauthor" : ["result","$UID","lastauthor"],
+        "issn"       : ["result","$UID","issn"],
+        "essn"       : ["result","$UID","essn"]        
+  }
+}
