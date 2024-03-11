@@ -8,9 +8,14 @@ import urllib.parse
 import logging
 import logging.config
 import re
+import os
 from . import load_ncbi_api_json
 
-logging.config.fileConfig('logging.config')
+try:
+    logging.config.fileConfig('logging.config')
+except Exception:
+    logging.basicConfig(level=logging.INFO)  # Example default logging configuration
+
 # Create a logger object
 logger = logging.getLogger(__name__)
 
@@ -21,6 +26,7 @@ class EntrezAPI:
         self.max_retries = 3
         self.function = function
         self.ncbi_api_json = load_ncbi_api_json(function)
+        self.api_key = os.environ.get('NCBI_API_KEY', None)
         # if function not in self.ncbi_api_json:
         #     logger.error(f"No NCBI connfig for {function=}")
         #     self.results_doc_definition = {}
@@ -31,6 +37,8 @@ class EntrezAPI:
     def rest_api_call(self, params):
         url_str = f"{self.base_url_str}/{self.function}.fcgi"
         params['retmode']='json'
+        if self.api_key:
+            params['api_key'] = self.api_key
         query = '&'.join([f"{urllib.parse.quote(k, 'utf-8')}={urllib.parse.quote(v, 'utf-8')}" for k, v in params.items()])
         url_str = f"{url_str}?{query}"
         logger.debug(url_str)
@@ -62,11 +70,15 @@ class EntrezAPI:
                 else:
                     handle_error(f"Failed to retrieve data. | Retry- {retry +1} | Response code- {url.getcode()}")
             except Exception as ex:
+                aviod_logging_interpolation=f"Error while calling url_str {str(ex)}"
+                logger.error(aviod_logging_interpolation)
+                error_msg=f"Check if you have a connection!! | Retry- {retry+1} | Response msg- {str(ex)}"
                 if isinstance(ex, urllib.error.HTTPError):
                     if ex.code == 500:
-                        error_msg=f"Check the format of the http request [Retry: {retry + 1}] code: {str(ex)}"
-                else:
-                    error_msg=f"Check if you have a connection!! | Retry- {retry+1} | Response msg- {str(ex)}"
+                        error_msg = f"Check the format of the http request [Retry: {retry + 1}] code: {str(ex)}"
+                    elif ex.code == 429:
+                        error_msg = f"Request limiter hit. waiting 2 seconds [Retry: {retry + 1}] code: {str(ex)}"
+                        time.sleep(2)
                 handle_error(error_msg)
 
         if api_result is None:

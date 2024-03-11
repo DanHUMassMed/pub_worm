@@ -97,8 +97,6 @@ class WormbaseAPI:
         else:
             return json_obj
     
-    
-
     def extract_single_element_lists(self, json_obj):
         if isinstance(json_obj, dict):
             for key, value in json_obj.items():
