@@ -1,14 +1,14 @@
 {
 "overview": {
-    "description"    : ["fields", "concise_description","data","text"],
-    "wormbase_id"    : ["fields", "name", "data", "id"],
-    "gene_name"      : ["fields", "name", "data", "label"],
-    "sequence_name"  : ["fields", "sequence_name", "data"],
-    "classification" : ["fields", "classification", "data", "type"],
-    "gene_class"     : ["fields", "gene_class", "data", "tag", "id"],
-    "status"         : ["fields", "status", "data"],
-    "operon"         : ["fields", "operon", "data", "id"],
-    "other_names"    : ["fields", "other_names", "data"]
+    "wb_description"    : ["fields", "concise_description","data","text"],
+    "wormbase_id"       : ["fields", "name", "data", "id"],
+    "wb_gene_name"      : ["fields", "name", "data", "label"],
+    "wb_sequence_name"  : ["fields", "sequence_name", "data"],
+    "wb_classification" : ["fields", "classification", "data", "type"],
+    "wb_gene_class"     : ["fields", "gene_class", "data", "tag", "id"],
+    "wb_status"         : ["fields", "status", "data"],
+    "wb_operon"         : ["fields", "operon", "data", "id"],
+    "wb_other_names"    : ["fields", "other_names", "data"]
   },
 "gene_ontology": {
     "gene_ontology_summary" : {
@@ -17,24 +17,24 @@
           "ROOT" : ["Molecular_function"],
           "SKIP" : {
             "ROOT":["term_description"],
-            "name" : ["label"],
-            "id": ["id"]
+            "go_term" : ["label"],
+            "go_id": ["id"]
           }
       },
       "Cellular_component": {
         "ROOT" : ["Cellular_component"],
         "SKIP" : {
           "ROOT":["term_description"],
-          "name" : ["label"],
-          "id": ["id"]
+          "go_term" : ["label"],
+          "go_id": ["id"]
         }
     },
     "Biological_process": {
           "ROOT" : ["Biological_process"],
               "SKIP" : {
                 "ROOT":["term_description"],
-                "name" : ["label"],
-                "id": ["id"]
+                "go_term" : ["label"],
+                "go_id": ["id"]
               }
         }
     }
@@ -42,14 +42,14 @@
 "references": {
     "references_list": { 
         "ROOT"    : ["fields", "references", "data", "results"],
-        "year"    : ["year"],
-        "journal" : ["journal"],
-        "title"   : ["title"],
-        "author"  : {
+        "wbp_year"    : ["year"],
+        "wbp_type"    : ["ptype"],
+        "wbp_journal" : ["journal"],
+        "wbp_title"   : ["title"],
+        "wbp_author"  : {
             "ROOT": ["author"],
             "CONCAT": ["label"]
-        }
-        
+        } 
     }
   }
 }

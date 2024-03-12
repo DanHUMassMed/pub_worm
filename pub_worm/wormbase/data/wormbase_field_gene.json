@@ -1,13 +1,14 @@
 {
 "references": {
     "references_list": { 
-        "ROOT"    : ["references", "data", "results"],
-        "abstract": ["abstract"],
-        "id"      : ["name", "id"],
-        "title"   : ["title"],
-        "journal" : ["journal"],
-        "year"    : ["year"],
-        "author"  : {
+        "ROOT"        : ["references", "data", "results"],
+        "wbp_abstract": ["abstract"],
+        "wbp_id"      : ["name", "id"],
+        "wbp_type"    : ["ptype"],
+        "wbp_title"   : ["title"],
+        "wbp_journal" : ["journal"],
+        "wbp_year"    : ["year"],
+        "wbp_author"  : {
             "ROOT": ["author"],
             "CONCAT": ["label"]
         }
@@ -21,24 +22,24 @@
           "ROOT" : ["Molecular_function"],
           "SKIP" : {
             "ROOT":["term_description"],
-            "name" : ["label"],
-            "id": ["id"]
+            "go_term" : ["label"],
+            "go_id": ["id"]
           }
       },
       "Cellular_component": {
         "ROOT" : ["Cellular_component"],
         "SKIP" : {
           "ROOT":["term_description"],
-          "name" : ["label"],
-          "id": ["id"]
+          "go_term" : ["label"],
+          "go_id": ["id"]
         }
     },
     "Biological_process": {
           "ROOT" : ["Biological_process"],
               "SKIP" : {
                 "ROOT":["term_description"],
-                "name" : ["label"],
-                "id": ["id"]
+                "go_term" : ["label"],
+                "go_id": ["id"]
               }
         }
       }
@@ -46,8 +47,8 @@
   "phenotype": {
     "phenotype_list": { 
         "ROOT" : ["phenotype", "data"],
-        "name" : ["phenotype","label"],
-        "id"   : ["phenotype", "id"]
+        "wbpt_name" : ["phenotype","label"],
+        "wbpt_id"   : ["phenotype", "id"]
     }
   }
 }

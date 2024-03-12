@@ -1,8 +1,8 @@
 {
 "pmid": {
-    "pmid" : ["pmid", "data"]
+    "pm_id" : ["pmid", "data"]
 },
 "abstract": {
-    "abstract" : ["abstract", "data"]
+    "wbp_abstract" : ["abstract", "data"]
 }
 }
