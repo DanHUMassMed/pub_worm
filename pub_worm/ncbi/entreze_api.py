@@ -14,7 +14,7 @@ from . import load_ncbi_api_json
 try:
     logging.config.fileConfig('logging.config')
 except Exception:
-    logging.basicConfig(level=logging.INFO)  # Example default logging configuration
+    logging.basicConfig(filename='pub_worm_entrez.log', level=logging.DEBUG)
 
 # Create a logger object
 logger = logging.getLogger(__name__)
@@ -51,6 +51,7 @@ class EntrezAPI:
 
         def handle_error(error_msg):
             print(error_msg)
+            logger.debug(error_msg)
             nonlocal done, retry, api_error
             retry +=1
             if retry >= self.max_retries:

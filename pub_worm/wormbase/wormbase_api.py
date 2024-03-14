@@ -11,7 +11,7 @@ from . import load_wormbase_api_json
 try:
     logging.config.fileConfig('logging.config')
 except Exception:
-    logging.basicConfig(level=logging.INFO)  # Example default logging configuration
+    logging.basicConfig(filename='pub_worm_wormbase.log', level=logging.DEBUG)
 
 # Create a logger object
 logger = logging.getLogger(__name__)
@@ -26,7 +26,7 @@ class WormbaseAPI:
         self.data_request = data_request
         self.wormbase_api_json = load_wormbase_api_json(call_type, call_class)
         if data_request not in self.wormbase_api_json:
-            logger.error(f"No wormbase connfig for {data_request=}")
+            logger.error(f"No wormbase config for {data_request=}")
             self.results_doc_definition = {}
         else:
             self.results_doc_definition = self.wormbase_api_json[data_request]
@@ -34,6 +34,7 @@ class WormbaseAPI:
 
     def rest_api_call(self, object_id):
         url_str = f"{self.base_url_str}/{self.call_type}/{self.call_class}/{object_id}/{self.data_request}"
+        logger.debug(url_str)
         retry = 0
         done = False
 
@@ -42,6 +43,7 @@ class WormbaseAPI:
 
         def handle_error(error_msg):
             print(error_msg)
+            logger.debug(error_msg)
             nonlocal done, retry, api_error
             retry +=1
             if retry >= self.max_retries:
@@ -61,6 +63,10 @@ class WormbaseAPI:
                 else:
                     handle_error(f"Failed to retrieve data. | Retry- {retry +1} | Response code- {url.getcode()}")
             except Exception as ex:
+                aviod_logging_interpolation=f"Error while calling url_str {str(ex)}"
+                logger.error(aviod_logging_interpolation)
+                error_msg=f"Check if you have a connection!! | Retry- {retry+1} | Response msg- {str(ex)}"
+                time.sleep(3)
                 if isinstance(ex, urllib.error.HTTPError):
                     if ex.code == 500:
                         error_msg=f"Check the format of the http request [Retry: {retry + 1}]\nurl:{url_str}\ncode: {str(ex)}"
@@ -75,7 +81,6 @@ class WormbaseAPI:
             pretty_data = json.dumps(api_result, indent=4)
             with open('http_response.json', 'w') as file:
                 file.write(pretty_data)
-            #logger.debug(pretty_data)
                 
         return api_result
 
@@ -140,7 +145,7 @@ class WormbaseAPI:
             # data_request_item_nm="description" data_request_item=["fields", "concise_description","data","text"]
             # data_request_item_nm="author"      data_request_item={ "ROOT": ["author"], "CONCAT": ["label"] }
             for data_request_item_nm, data_request_item in doc_definition.items():
-                logger.debug(f"{data_request_item_nm=}{data_request_item=}")
+                #logger.debug(f"{data_request_item_nm=}{data_request_item=}")
                 if isinstance(data_request_item, list):
                     data_request_item_path = data_request_item
                     widget_item = get_json(data_to_process, data_request_item_path)
@@ -151,8 +156,6 @@ class WormbaseAPI:
                     #pretty_data = json.dumps(data_to_process, indent=4)
                     #logger.debug(f"BEFORE {pretty_data}")
                     sub_data_to_process = get_json(data_to_process, data_request_item["ROOT"])
-                    if sub_data_to_process is None:
-                        logger.debug(f"AFTER WTF")
 
                     if sub_data_to_process is not None:
                         #pretty_data = json.dumps(sub_data_to_process, indent=4)
@@ -164,23 +167,19 @@ class WormbaseAPI:
                                 if "CONCAT" in sub_results:
                                     sub_results_str +=str(f"{sub_results['CONCAT']}|")
                             results_dict[data_request_item_nm] = sub_results_str[:-1]
-                            logger.debug(f"Found CONCAT")
+                            
                         else:
-                            logger.debug(f"AFTER NO CONCAT")
                             if isinstance(sub_data_to_process, dict):
-                                logger.debug(f"DICT {sub_data_to_process=}")
-                                logger.debug(f"DICT {data_request_item=}")
                                 results_dict[data_request_item_nm] = parse_data(sub_data_to_process, data_request_item, {})
                             else: #It is a list
                                 sub_results_list = []
                                 for sub_data_item in sub_data_to_process:
                                     list_item_to_append = parse_data(sub_data_item, data_request_item, {})
-                                    logger.debug(f"LIST ITEM {list_item_to_append=}")
                                     sub_results_list.append(list_item_to_append)
                                 results_dict[data_request_item_nm] = sub_results_list
 
                 else:
-                    logger.debug("!!"*40)
+                    logger.err("parse_data() ERROR Did not expect to get here!!")
 
             # Post processing
             results_dict = self.extract_empty_dict(results_dict)
