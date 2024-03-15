@@ -8,6 +8,7 @@ __pycache__/
 *.log
 result.json
 http_response.json
+http_response.xml
 .DS_Store
 
 redis-stable/

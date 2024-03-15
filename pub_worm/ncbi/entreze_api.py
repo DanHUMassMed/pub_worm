@@ -110,7 +110,6 @@ class EntrezAPI:
             search_params['db']         = method_params.get('pubmed', 'pubmed')
             if "term" in method_params:
                 search_params['term']   = method_params.get('term')
-
             else:
                 logger.error("'term' is a required parameter but was not passed in!")
                 return {}
