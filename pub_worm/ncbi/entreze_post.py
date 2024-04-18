@@ -170,3 +170,49 @@ def entreze_pmid_summaries(params):
         paper_summarys.append(paper_summary)
 
     return paper_summarys
+
+
+def entreze_pmid_fetch(params):
+    function="efetch"
+    efetch_params = {}
+    efetch_params['db']  = params.get('db', 'pubmed')
+
+    required_params = ['query_key', 'WebEnv']
+    for param_name in required_params:
+        if not get_required_param(params, param_name, efetch_params):
+            return []
+ 
+    api_result = rest_api_call(function, efetch_params)
+    # Parse the XML response using BeautifulSoup
+    soup = BeautifulSoup(api_result, "xml")
+
+    api_error = get_tag_text(soup,"rest_api_error")
+    if api_error:
+        logger.error("Error in entreze_pmid_efetch")
+        # Maybe throw and exception here
+        return []
+        
+
+    # Pretty-print the XML content
+    pretty_data = soup.prettify()
+    with open('http_response1.xml', 'w') as file:
+        file.write(pretty_data)
+
+    paper_summarys = []
+    # # Extract information for each UID
+    # for doc in soup.find_all("DocSum"):
+    #     uid         = get_tag_text(doc, "Id")
+    #     issn        = get_tag_text(doc, "Item", {"Name": "ISSN"})
+    #     essn        = get_tag_text(doc, "Item", {"Name": "ESSN"})
+    #     last_author = get_tag_text(doc, "Item", {"Name": "LastAuthor"})
+    #     pmc_id      = get_tag_text(doc, "Item", {"Name": "pmc"})
+    #     paper_summary = {
+    #         "uid"         : uid,
+    #         "issn"        : issn,
+    #         "essn"        : essn,
+    #         "last_author" : last_author,
+    #         "pmc_id"      : pmc_id
+    #     }
+    #     paper_summarys.append(paper_summary)
+
+    return paper_summarys
