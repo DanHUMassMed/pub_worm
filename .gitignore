@@ -13,5 +13,6 @@ http_response.xml
 
 redis-stable/
 dist/
+output/
 *.egg-info/
 
