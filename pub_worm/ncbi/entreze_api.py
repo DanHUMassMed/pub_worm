@@ -9,7 +9,7 @@ import logging.config
 import pandas as pd
 from bs4 import BeautifulSoup
 import requests
-
+from pub_worm.impact_factor.impact_factor_lookup import get_impact_factor
 
 try:
     logging.config.fileConfig('logging.config')
@@ -29,8 +29,7 @@ class EntrezAPI:
         self.api_key = os.environ.get('NCBI_API_KEY', None)
 
 
-
-    def rest_api_call(self, params, data=None):
+    def _rest_api_call(self, params, data=None):
         url_str = f"{self.base_url_str}/{self.function}.fcgi"
         params['retmode']='xml'
 
@@ -64,7 +63,7 @@ class EntrezAPI:
                     response = requests.post(url_str, data=post_data, timeout=self.timeout)
                 else:
                     response = requests.get(url_str, timeout=self.timeout)
-            
+
                 response.raise_for_status()  # Check for HTTP errors
                 if response.status_code == 200:
                     done = True
@@ -89,19 +88,26 @@ class EntrezAPI:
 
         if api_result is None:
             api_result = f"<response><rest_api_error>{api_error}</rest_api_error></response>"
-        
+
         if logger.isEnabledFor(logging.DEBUG):
             soup = BeautifulSoup(api_result, "xml")
             # Pretty-print the XML content
             pretty_data = soup.prettify()
             with open('http_response.xml', 'w') as file:
                 file.write(pretty_data)
-            #logger.debug(pretty_data)
-                  
+            logger.debug(pretty_data)
+
         return api_result
 
 
-    def get_tag_text(self, doc, tag_name, attribute=None):
+    def _get_tag(self, soup, path_names):
+        root = soup
+        for path_name in path_names:
+            logger.debug(f"get_tag {type(root)} {root} {path_name}")
+            root = root.find(path_name, default='')
+        return root
+
+    def _get_tag_text(self, doc, tag_name, attribute=None):
         if attribute:
             tag = doc.find(tag_name, attribute)
         else:
@@ -109,240 +115,163 @@ class EntrezAPI:
         return tag.text if tag else ""
 
 
+    def entreze_esearch(self, params):
+        self.function="esearch"
+        esearch_params = {}
+        esearch_params['db']         = params.get('db', 'pubmed')
+        esearch_params['retmax']     = params.get('retmax', '200')
+        esearch_params['usehistory'] = "y"
+        esearch_params['term']       = params.get('term', None)
+        if esearch_params['term'] is None:
+            logger.debug("Param 'searchTerm' is required but not passed.")
+
+        api_result = self._rest_api_call(esearch_params)
+        ret_params = self._history_key_to_json(api_result)
+        return ret_params
+
     def entreze_epost(self, data, params={}):
         self.function="epost"
         epost_params = {}
-        epost_params['db']  = params.get('db', 'pubmed')
+        epost_params['db']     = params.get('db', 'pubmed')
         if data is None:
             logger.debug("Param 'data' is required but not passed.")
 
-        api_result = self.rest_api_call(epost_params, data)
+        api_result = self._rest_api_call(epost_params, data)
+        ret_params = self._history_key_to_json(api_result)
+        ret_params['count'] = len(data)
+        return ret_params
+
+    def _history_key_to_json(self, api_result):
         ret_params = {}
+        ret_params['function'] = self.function
         # Parse the XML response using BeautifulSoup
         soup = BeautifulSoup(api_result, "xml")
         # Extract WebEnv and QueryKey
-        web_env   = self.get_tag_text(soup,"WebEnv")
-        query_key = self.get_tag_text(soup,"QueryKey")
-        api_error = self.get_tag_text(soup,"rest_api_error")
+        count     = self._get_tag_text(soup, "Count")
+        ret_max   = self._get_tag_text(soup, "RetMax")
+        ret_start = self._get_tag_text(soup, "RetStart")
+        web_env   = self._get_tag_text(soup, "WebEnv")
+        query_key = self._get_tag_text(soup, "QueryKey")
+        api_error = self._get_tag_text(soup, "rest_api_error")
+        if count:
+            ret_params['count'] = count
+        if ret_max:
+            ret_params['ret_max'] = ret_max
+        if ret_start:
+            ret_params['ret_start'] = ret_start
+
         ret_params['query_key'] = query_key
         ret_params['WebEnv']    = web_env
         if api_error:
-            logger.error("Error in entreze_epost")
+            logger.error("Error in history_key_to_json")
             ret_params = {}
             ret_params["Error"] = api_error
-
         return ret_params
-
 
     def entreze_pmid_summaries(self, params):
         paper_summarys = []
-        self.function="esummary"
-        esummary_params = {}
-        esummary_params['db']  = params.get('db', 'pubmed')
-
-        required_params = ['query_key', 'WebEnv']
-        for param_name in required_params:
-            if param_name in params:
-                esummary_params[param_name] = params[param_name]
-            else:
-                logger.debug(f"Param '{param_name}' is required but not passed")
-                return paper_summarys
-    
-    
-        api_result = self.rest_api_call(esummary_params)
-        # Parse the XML response using BeautifulSoup
-        soup = BeautifulSoup(api_result, "xml")
-
-        api_error = self.get_tag_text(soup,"rest_api_error")
-        if api_error:
-            logger.error("Error in entreze_pmid_summaries")
-            # Maybe throw and exception here
-            return []
-            
-
+        soup = self._entreze_get_data(params, "esummary")
+        if soup is None:
+            return paper_summarys
+        
         # Extract information for each UID
         for doc in soup.find_all("DocSum"):
-            uid         = self.get_tag_text(doc, "Id")
-            issn        = self.get_tag_text(doc, "Item", {"Name": "ISSN"})
-            essn        = self.get_tag_text(doc, "Item", {"Name": "ESSN"})
-            last_author = self.get_tag_text(doc, "Item", {"Name": "LastAuthor"})
-            pmc_id      = self.get_tag_text(doc, "Item", {"Name": "pmc"})
+            uid         = self._get_tag_text(doc, "Id")
+            issn        = self._get_tag_text(doc, "Item", {"Name": "ISSN"})
+            essn        = self._get_tag_text(doc, "Item", {"Name": "ESSN"})
+            last_author = self._get_tag_text(doc, "Item", {"Name": "LastAuthor"})
+            pmc_id      = self._get_tag_text(doc, "Item", {"Name": "pmc"})
+            title       = self._get_tag_text(doc, "Item", {"Name": "Title"})
+            source      = self._get_tag_text(doc, "Item", {"Name": "Source"})
+            
             paper_summary = {
                 "uid"         : uid,
                 "issn"        : issn,
                 "essn"        : essn,
                 "last_author" : last_author,
-                "pmc_id"      : pmc_id
+                "pmc_id"      : pmc_id,
+                "title"       : title,
+                "source"      : source
             }
             paper_summarys.append(paper_summary)
 
         return paper_summarys
 
+    def entreze_efetch(self, params):
+        logger.debug("Entering entreze_efetch!!")
+        efetch_results = []
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    # @staticmethod
-    # def get_ncbi_data(method_params, data_request):
-    #         def replace_uid(uid, json_data):
-    #             json_str = json.dumps(json_data)
-    #             replaced_json_str = re.sub(r'\$UID', str(uid), json_str)
-    #             replaced_json = json.loads(replaced_json_str)
-    #             return replaced_json
-
-    #         entrez_search_api = EntrezAPI('esearch')
-    #         search_params = {}
-    #         search_params['usehistory'] = 'y' 
-    #         search_params['retmax']     = method_params.get('retmax', '200')
-    #         search_params['restart']    = method_params.get('restart', '0')
-    #         search_params['db']         = method_params.get('pubmed', 'pubmed')
-    #         if "term" in method_params:
-    #             search_params['term']   = method_params.get('term')
-    #         else:
-    #             logger.error("'term' is a required parameter but was not passed in!")
-    #             return {}
-
-    #         search_ret_data = entrez_search_api.rest_api_call(search_params)
-
-    #         summary_params = {}
-    #         summary_params['retmax']     = search_params.get('retmax', '200')
-    #         summary_params['restart']    = search_params.get('restart', '0')
-    #         summary_params['db']         = search_params.get('pubmed', 'pubmed')
-
-    #         if 'esearchresult' in search_ret_data:
-    #             esearchresult = search_ret_data['esearchresult']
-    #             summary_params['query_key'] = esearchresult.get('querykey')
-    #             summary_params['WebEnv']    = esearchresult.get('webenv')
-    #         else:
-    #             logger.error("'esearchresult' is expected in the return but was not found!")
-    #             return {}
-
-    #         entrez_summary_api = EntrezAPI('esummary')
-    #         summary_ret_data = entrez_summary_api.rest_api_call(summary_params)
-    #         ret_dict = {}
-
-    #         ncbi_api_json = load_ncbi_api_json('esummary')
-    #         results_doc_definition = ncbi_api_json[data_request]
-    #         uid = search_params['term'][:-5]
-    #         results_doc_definition = replace_uid(uid, results_doc_definition)
-    #         ret_dict = EntrezAPI.parse_data(summary_ret_data, results_doc_definition, ret_dict)
-    #         return ret_dict
-
-
-    # @staticmethod
-    # def get_json_element(json_data, path):
-    #     result = json_data
-    #     try:
-    #         for key in path:
-    #             result = result[key]
-    #     except Exception: #KeyError TypeError
-    #         result = None
-    #     return result
-
-    # @staticmethod
-    # def extract_empty_dict(json_obj):
-    #     if isinstance(json_obj, dict):
-    #         return {k: EntrezAPI.extract_empty_dict(v) for k, v in json_obj.items() if v and EntrezAPI.extract_empty_dict(v)}
-    #     elif isinstance(json_obj, list):
-    #         return [EntrezAPI.extract_empty_dict(v) for v in json_obj if v and EntrezAPI.extract_empty_dict(v)]
-    #     else:
-    #         return json_obj
-    
-    # @staticmethod
-    # def extract_single_element_lists(json_obj):
-    #     if isinstance(json_obj, dict):
-    #         for key, value in json_obj.items():
-    #             json_obj[key] = EntrezAPI.extract_single_element_lists(value)
-    #     elif isinstance(json_obj, list):
-    #         # If list length is 1 remove list
-    #         if len(json_obj) == 1:
-    #             return EntrezAPI.extract_single_element_lists(json_obj[0])
-    #         else:
-    #             return [EntrezAPI.extract_single_element_lists(item) for item in json_obj]
-    #     return json_obj
-
-    # @staticmethod
-    # def extract_skip_elements(json_obj):
-    #     if isinstance(json_obj, dict):
-    #         for key, value in json_obj.items():
-    #             if key == "SKIP":
-    #                 json_obj = EntrezAPI.extract_skip_elements(value)
-    #             else:
-    #                 json_obj[key] = EntrezAPI.extract_skip_elements(value)
-    #     elif isinstance(json_obj, list):
-    #         return [EntrezAPI.extract_skip_elements(item) for item in json_obj]
-    #     return json_obj
-
-    # @staticmethod
-    # def parse_data(data_to_process, doc_definition, results_dict):    
-    #     # data_request_item_nm="description" data_request_item=["fields", "concise_description","data","text"]
-    #     # data_request_item_nm="author"      data_request_item={ "ROOT": ["author"], "CONCAT": ["label"] }
-    #     for data_request_item_nm, data_request_item in doc_definition.items():
-    #         logger.debug(f"{data_request_item_nm=}{data_request_item=}")
-    #         if isinstance(data_request_item, list):
-    #             data_request_item_path = data_request_item
-    #             widget_item = EntrezAPI.get_json_element(data_to_process, data_request_item_path)
-    #             if widget_item is not None:
-    #                 results_dict[data_request_item_nm] = widget_item
-    #         elif isinstance(data_request_item, dict):
-    #             #logger.debug(f"BEFORE {data_request_item=}, {data_request_item['ROOT']=}")
-    #             #pretty_data = json.dumps(data_to_process, indent=4)
-    #             #logger.debug(f"BEFORE {pretty_data}")
-    #             sub_data_to_process = EntrezAPI.get_json_element(data_to_process, data_request_item["ROOT"])
-    #             if sub_data_to_process is None:
-    #                 logger.debug(f"AFTER WTF")
-
-    #             if sub_data_to_process is not None:
-    #                 #pretty_data = json.dumps(sub_data_to_process, indent=4)
-    #                 #logger.debug(f"AFTER {pretty_data}")
-    #                 if "CONCAT" in data_request_item:
-    #                     sub_results_str = ""
-    #                     for sub_data_item in sub_data_to_process:
-    #                         sub_results = EntrezAPI.parse_data(sub_data_item, data_request_item, {})
-    #                         if "CONCAT" in sub_results:
-    #                             sub_results_str +=str(f"{sub_results['CONCAT']}|")
-    #                     results_dict[data_request_item_nm] = sub_results_str[:-1]
-    #                     logger.debug(f"Found CONCAT")
-    #                 else:
-    #                     logger.debug(f"AFTER NO CONCAT")
-    #                     if isinstance(sub_data_to_process, dict):
-    #                         logger.debug(f"DICT {sub_data_to_process=}")
-    #                         logger.debug(f"DICT {data_request_item=}")
-    #                         results_dict[data_request_item_nm] = EntrezAPI.parse_data(sub_data_to_process, data_request_item, {})
-    #                     else: #It is a list
-    #                         sub_results_list = []
-    #                         for sub_data_item in sub_data_to_process:
-    #                             list_item_to_append = EntrezAPI.parse_data(sub_data_item, data_request_item, {})
-    #                             logger.debug(f"LIST ITEM {list_item_to_append=}")
-    #                             sub_results_list.append(list_item_to_append)
-    #                         results_dict[data_request_item_nm] = sub_results_list
-
-    #         else:
-    #             logger.debug("!!"*40)
-
-    #     # Post processing
-    #     results_dict = EntrezAPI.extract_empty_dict(results_dict)
-    #     results_dict = EntrezAPI.extract_skip_elements(results_dict)
-    #     results_dict = EntrezAPI.extract_single_element_lists(results_dict)
-    #     return results_dict
+        rec_count = int(params.get('count', 0))
+        restart = 0
+        while rec_count > 0 :
+            params['restart'] = restart
+            soup = self._entreze_get_data(params, "efetch")
+            if soup is None:
+                return efetch_results
             
+            root_element = soup.find()
+            if root_element.name == 'PubmedArticleSet':
+                logger.debug("root_element == PubmedArticleSet!!")
+                pubmed_articles = self._get_pubmed_articles(soup)
+                # Get PubmedArticleSet
+                efetch_results += pubmed_articles
+
+            restart   +=200 # Increment record position by 200
+            rec_count -=200 # Pull the next 200 records or however many are remaining
+        
+
+        return efetch_results
+    
+    def _get_pubmed_articles(self, soup):
+        articles = []
+
+        pubmed_articles = soup.find_all('PubmedArticle')
+        # Iterate over the <PubmedArticle> elements
+        for pubmed_article in pubmed_articles:
+            article = {}
+            medline_citation = self._get_tag(pubmed_article, ['MedlineCitation'])
+            article_details  = self._get_tag(medline_citation, ['Article'])
+            abstract_details = self._get_tag(article_details, ['Abstract'])
+            journal          = self._get_tag(article_details, ['Journal'])
+            pub_date         = self._get_tag(journal, ['JournalIssue', 'PubDate'])
+
+            article['pmid']     = self._get_tag_text(medline_citation, "PMID")
+            article['issn']     = self._get_tag_text(journal, "ISSN", {"IssnType": "Print"})
+            article['eissn']    = self._get_tag_text(journal, "ISSN", {"IssnType": "Electronic"})
+            article['pub_year'] = self._get_tag_text(pub_date, "Year")
+            article['pub_abbr'] = self._get_tag_text(journal, "ISOAbbreviation")
+            article['title']    = self._get_tag_text(article_details, "ArticleTitle")
+            article['abstract'] = self._get_tag_text(abstract_details, "AbstractText")
+            if article['issn']:
+                article['impact_factor'] = get_impact_factor(article['issn'])
+            if 'impact_factor' not in article:
+                article['impact_factor'] = get_impact_factor(article['eissn'])
+
+            articles.append(article)
+
+        return articles
+
+    def _entreze_get_data(self, params, function):
+        self.function = function
+        efetch_params = {}
+        efetch_params['db']  = params.get('db', 'pubmed')
+
+        required_params = ['query_key', 'WebEnv']
+        for param_name in required_params:
+            if param_name in params:
+                efetch_params[param_name] = params[param_name]
+            else:
+                logger.debug(f"Param '{param_name}' is required but not passed")
+                return None
+
+        api_result = self._rest_api_call(efetch_params)
+        # Parse the XML response using BeautifulSoup
+        soup = BeautifulSoup(api_result, "xml")
+
+        api_error = self._get_tag_text(soup,"rest_api_error")
+        if api_error:
+            logger.error("Error in _entreze_get_data")
+            # Maybe throw and exception here
+            return None
+        
+        return soup

@@ -29,23 +29,37 @@ def dump_api_call(function_name, actual_result,data_type="json"):
         #file.write(mystring)
 
 
+def test_entreze_esearch():
+    function_name = inspect.currentframe().f_code.co_name
+    search_term = "Marnett L[au] AND (2019/01/01:2024/04/16[pdat])AND (vanderbilt[affil])"
+    esearch_params = {'term': search_term }
+
+    ncbi_api = EntrezAPI()
+    actual_result = ncbi_api.entreze_esearch(esearch_params)
+    dump_api_call(function_name, actual_result, "json")
+
+    expected_result = "1"
+    assert 'query_key' in actual_result, "'query_key' not found in result"
+    assert actual_result['query_key'] == expected_result
+
 
 def test_entreze_epost():
     function_name = inspect.currentframe().f_code.co_name
     data = ["10021351", "10022905", "10022914", "10022975", "10048487", "10048958", "10049162", "10049362", "10049567", "10049576", "10051671", "10051850", "10064800", "10066248"]
-    
+
     ncbi_api = EntrezAPI()
     actual_result = ncbi_api.entreze_epost(data)
     dump_api_call(function_name, actual_result, "json")
-    
+
     expected_result = "1"
+    assert 'query_key' in actual_result, "'query_key' not found in result"
     assert actual_result['query_key'] == expected_result
 
 
 def test_entreze_pmid_summaries():
     function_name = inspect.currentframe().f_code.co_name
-    data = ["10021351", "10022905", "10022914", "10022975", "10048487", "10048958", "10049162", "10049362", "10049567", "10049576", "10051671", "10051850", "10064800", "10066248"]
-    
+    data = ["10021351"]
+
     ncbi_api = EntrezAPI()
     interm_result = ncbi_api.entreze_epost(data)
 
@@ -53,12 +67,47 @@ def test_entreze_pmid_summaries():
     if 'WebEnv' in interm_result:
         actual_result = ncbi_api.entreze_pmid_summaries(interm_result)
         dump_api_call(function_name, actual_result, "json")
-    
-    expected_result = "1"
-    if not 'query_key' in actual_result:
-        assert True is False
 
-    assert actual_result['query_key'] == expected_result
+
+    assert len(actual_result) == 1, f"Expected exactly 1 result found but {len(actual_result)}"
+    assert 'issn' in actual_result[0], "'issn' not found in result"
+    assert actual_result[0]['issn'] == "0950-1991",f"Expected 'issn' to equal 0950-1991 but found {actual_result[0]['issn']}"
+
+def test_entreze_epost_efetch():
+    function_name = inspect.currentframe().f_code.co_name
+    data = ["10021351"]
+
+    ncbi_api = EntrezAPI()
+    interm_result = ncbi_api.entreze_epost(data)
+
+    actual_result = {}
+    assert 'WebEnv' in interm_result, "Expected 'WebEnv' in interm_result"
+
+    actual_result = ncbi_api.entreze_efetch(interm_result)
+    dump_api_call(function_name, actual_result, "json")
+
+    assert len(actual_result) == 1, f"Expected exactly 1 result found but {len(actual_result)}"
+    assert 'pub_abbr' in actual_result[0], "'pub_abbr' not found in result"
+    assert actual_result[0]['pub_abbr'] == "Development",f"Expected 'pub_abbr' to equal Development but found {actual_result[0]['pub_abbr']}"
+
+def test_entreze_esearch_efetch():
+    function_name = inspect.currentframe().f_code.co_name
+    
+    search_term = "Marnett L[au] AND (2019/01/01:2024/04/16[pdat])AND (vanderbilt[affil])"
+    esearch_params = {'term': search_term }
+
+    ncbi_api = EntrezAPI()
+    interm_result = ncbi_api.entreze_esearch(esearch_params)
+
+    actual_result = {}
+    assert 'WebEnv' in interm_result, "Expected 'WebEnv' in interm_result"
+
+    actual_result = ncbi_api.entreze_efetch(interm_result)
+    dump_api_call(function_name, actual_result, "json")
+
+    # assert len(actual_result) == 1, f"Expected exactly 1 result found but {len(actual_result)}"
+    # assert 'issn' in actual_result[0], "'issn' not found in result"
+    # assert actual_result[0]['issn'] == "0950-1991",f"Expected 'issn' to equal 0950-1991 but found {actual_result[0]['issn']}"
 
 
 if __name__ == "__main__":
