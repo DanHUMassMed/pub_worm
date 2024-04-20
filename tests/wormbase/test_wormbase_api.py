@@ -66,3 +66,6 @@ def test_from_class_paper_request_abstract():
     
     expected_result = "Nephronophthisis (NPH) is a cystic kidney disorder"
     assert actual_result['wbp_abstract'].startswith(expected_result)
+
+if __name__ == "__main__":
+    pytest.main([__file__])

@@ -1,5 +1,3 @@
-# PYTHONPATH="." python tests/impact_factor/test_get_impact_factor.py
-
 import pytest
 from pub_worm.impact_factor.impact_factor_lookup import get_impact_factor
 
@@ -23,3 +21,5 @@ def test_get_impact_factor_non_existing_issn():
     # Assertion: Check that the function returns None for non-existing ISSN
     assert result is None
 
+if __name__ == "__main__":
+    pytest.main([__file__])
