@@ -108,12 +108,21 @@ class EntrezAPI:
         return root
 
     def _get_tag_text(self, doc, tag_name, attribute=None):
-        if attribute:
-            tag = doc.find(tag_name, attribute)
+        ret_val = ""
+        if doc is not None:
+            try:
+                if attribute:
+                    tag = doc.find(tag_name, attribute)
+                else:
+                    tag = doc.find(tag_name)
+                ret_val = tag.text if tag else ""
+            except Exception as e:
+                print(f"Error finding tag: {e}")
+                ret_val = ""
         else:
-            tag = doc.find(tag_name)
-        return tag.text if tag else ""
+            ret_val = ""
 
+        return ret_val
 
     def entreze_esearch(self, params):
         self.function="esearch"

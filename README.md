@@ -7,10 +7,9 @@ $PYTHONPATH="./src" python -m pub_worm.wormbase.WormbaseREST
 #### Deploy
 * Advance the version number in setup.py
 * `conda deactivate # twine is installed in base env`
-* `increment setup.py version`
 * `cd <project directory>`
 * `rm -rf ./dist`
-* `rm -rf ./wormcat_batch.egg-info`
+* `rm -rf ./pub_worm.egg-info`
 * `python setup.py sdist`
 * `twine check dist/*`
 * `twine upload --repository pypi dist/*`
