@@ -93,36 +93,12 @@ class EntrezAPI:
             soup = BeautifulSoup(api_result, "xml")
             # Pretty-print the XML content
             pretty_data = soup.prettify()
-            with open('http_response.xml', 'w') as file:
+            with open('http_response.xml', 'w', encoding="utf-8") as file:
                 file.write(pretty_data)
             logger.debug(pretty_data)
 
         return api_result
 
-
-    def _get_tag(self, soup, path_names):
-        root = soup
-        for path_name in path_names:
-            logger.debug(f"get_tag {type(root)} {root} {path_name}")
-            root = root.find(path_name, default='')
-        return root
-
-    def _get_tag_text(self, doc, tag_name, attribute=None):
-        ret_val = ""
-        if doc is not None:
-            try:
-                if attribute:
-                    tag = doc.find(tag_name, attribute)
-                else:
-                    tag = doc.find(tag_name)
-                ret_val = tag.text if tag else ""
-            except Exception as e:
-                print(f"Error finding tag: {e}")
-                ret_val = ""
-        else:
-            ret_val = ""
-
-        return ret_val
 
     def entreze_esearch(self, params):
         self.function="esearch"
@@ -148,33 +124,6 @@ class EntrezAPI:
         api_result = self._rest_api_call(epost_params, data)
         ret_params = self._history_key_to_json(api_result)
         ret_params['count'] = len(data)
-        return ret_params
-
-    def _history_key_to_json(self, api_result):
-        ret_params = {}
-        ret_params['function'] = self.function
-        # Parse the XML response using BeautifulSoup
-        soup = BeautifulSoup(api_result, "xml")
-        # Extract WebEnv and QueryKey
-        count     = self._get_tag_text(soup, "Count")
-        ret_max   = self._get_tag_text(soup, "RetMax")
-        ret_start = self._get_tag_text(soup, "RetStart")
-        web_env   = self._get_tag_text(soup, "WebEnv")
-        query_key = self._get_tag_text(soup, "QueryKey")
-        api_error = self._get_tag_text(soup, "rest_api_error")
-        if count:
-            ret_params['count'] = count
-        if ret_max:
-            ret_params['ret_max'] = ret_max
-        if ret_start:
-            ret_params['ret_start'] = ret_start
-
-        ret_params['query_key'] = query_key
-        ret_params['WebEnv']    = web_env
-        if api_error:
-            logger.error("Error in history_key_to_json")
-            ret_params = {}
-            ret_params["Error"] = api_error
         return ret_params
 
     def entreze_pmid_summaries(self, params):
@@ -207,6 +156,18 @@ class EntrezAPI:
         return paper_summarys
 
     def entreze_efetch(self, params):
+        """
+        Call entrez/eutils efetch
+
+        Args:
+            params: The parameter to be used to call entrez/eutils.
+            function (str): The entrez function to call ['efetch' or 'esummary'].
+
+        Returns:
+            efetch_results: A List of Json Object that are the result of the call
+
+        Note: Currently only calling Pubmed
+        """
         logger.debug("Entering entreze_efetch!!")
         efetch_results = []
 
@@ -231,6 +192,36 @@ class EntrezAPI:
 
         return efetch_results
     
+    ############# entrez/eutils Helper funtions #############
+    
+    def _history_key_to_json(self, api_result):
+        ret_params = {}
+        ret_params['function'] = self.function
+        # Parse the XML response using BeautifulSoup
+        soup = BeautifulSoup(api_result, "xml")
+        # Extract WebEnv and QueryKey
+        count     = self._get_tag_text(soup, "Count")
+        ret_max   = self._get_tag_text(soup, "RetMax")
+        ret_start = self._get_tag_text(soup, "RetStart")
+        web_env   = self._get_tag_text(soup, "WebEnv")
+        query_key = self._get_tag_text(soup, "QueryKey")
+        api_error = self._get_tag_text(soup, "rest_api_error")
+        if count:
+            ret_params['count'] = count
+        if ret_max:
+            ret_params['ret_max'] = ret_max
+        if ret_start:
+            ret_params['ret_start'] = ret_start
+
+        ret_params['query_key'] = query_key
+        ret_params['WebEnv']    = web_env
+        if api_error:
+            logger.error("Error in history_key_to_json")
+            ret_params = {}
+            ret_params["Error"] = api_error
+        return ret_params
+
+
     def _get_pubmed_articles(self, soup):
         articles = []
 
@@ -261,19 +252,31 @@ class EntrezAPI:
         return articles
 
     def _entreze_get_data(self, params, function):
+        """
+        Helper function to call _rest_api_call
+
+        Args:
+        params: The parameter to be used to call entrez/eutils.
+        function (str): The entrez function to call ['efetch' or 'esummary'].
+
+        Returns:
+            soup: Beautiful Soup Response XML
+
+        Note: Both efetch and esummary use the same setup code before calling _rest_api_call
+        """
         self.function = function
-        efetch_params = {}
-        efetch_params['db']  = params.get('db', 'pubmed')
+        entrez_params = {}
+        entrez_params['db']  = params.get('db', 'pubmed')
 
         required_params = ['query_key', 'WebEnv']
         for param_name in required_params:
             if param_name in params:
-                efetch_params[param_name] = params[param_name]
+                entrez_params[param_name] = params[param_name]
             else:
                 logger.debug(f"Param '{param_name}' is required but not passed")
                 return None
 
-        api_result = self._rest_api_call(efetch_params)
+        api_result = self._rest_api_call(entrez_params)
         # Parse the XML response using BeautifulSoup
         soup = BeautifulSoup(api_result, "xml")
 
@@ -284,3 +287,30 @@ class EntrezAPI:
             return None
         
         return soup
+    
+    ############# Beautiful Soup XML Helper funtions #############
+
+    def _get_tag(self, soup, path_names):
+        root = soup
+        for path_name in path_names:
+            logger.debug(f"get_tag {type(root)} {root} {path_name}")
+            root = root.find(path_name, default='')
+        return root
+
+    def _get_tag_text(self, soup, tag_name, attribute=None):
+        ret_val = ""
+        if soup is not None:
+            try:
+                if attribute:
+                    tag = soup.find(tag_name, attribute)
+                else:
+                    tag = soup.find(tag_name)
+                ret_val = tag.text if tag else ""
+            except Exception as e:
+                print(f"Error finding tag in _get_tag_text: {e}")
+                ret_val = ""
+        else:
+            ret_val = ""
+
+        return ret_val
+

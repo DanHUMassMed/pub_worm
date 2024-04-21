@@ -32,7 +32,7 @@ class WormbaseAPI:
             self.results_doc_definition = self.wormbase_api_json[data_request]
         
 
-    def rest_api_call(self, object_id):
+    def _rest_api_call(self, object_id):
         url_str = f"{self.base_url_str}/{self.call_type}/{self.call_class}/{object_id}/{self.data_request}"
         logger.debug(url_str)
         retry = 0
@@ -84,7 +84,7 @@ class WormbaseAPI:
                 
         return api_result
 
-    def get_json_element(self, json_data, path):
+    def _get_json_element(self, json_data, path):
         result = json_data
         try:
             for key in path:
@@ -94,45 +94,45 @@ class WormbaseAPI:
         return result
 
 
-    def extract_empty_dict(self, json_obj):
+    def _extract_empty_dict(self, json_obj):
         if isinstance(json_obj, dict):
-            return {k: self.extract_empty_dict(v) for k, v in json_obj.items() if v and self.extract_empty_dict(v)}
+            return {k: self._extract_empty_dict(v) for k, v in json_obj.items() if v and self._extract_empty_dict(v)}
         elif isinstance(json_obj, list):
-            return [self.extract_empty_dict(v) for v in json_obj if v and self.extract_empty_dict(v)]
+            return [self._extract_empty_dict(v) for v in json_obj if v and self._extract_empty_dict(v)]
         else:
             return json_obj
     
-    def extract_single_element_lists(self, json_obj):
+    def _extract_single_element_lists(self, json_obj):
         if isinstance(json_obj, dict):
             for key, value in json_obj.items():
-                json_obj[key] = self.extract_single_element_lists(value)
+                json_obj[key] = self._extract_single_element_lists(value)
         elif isinstance(json_obj, list):
             # If list length is 1 remove list
             if len(json_obj) == 1:
-                return self.extract_single_element_lists(json_obj[0])
+                return self._extract_single_element_lists(json_obj[0])
             else:
-                return [self.extract_single_element_lists(item) for item in json_obj]
+                return [self._extract_single_element_lists(item) for item in json_obj]
         return json_obj
 
-    def extract_skip_elements(self, json_obj):
+    def _extract_skip_elements(self, json_obj):
         if isinstance(json_obj, dict):
             for key, value in json_obj.items():
                 if key == "SKIP":
-                    json_obj = self.extract_skip_elements(value)
+                    json_obj = self._extract_skip_elements(value)
                 else:
-                    json_obj[key] = self.extract_skip_elements(value)
+                    json_obj[key] = self._extract_skip_elements(value)
         elif isinstance(json_obj, list):
-            return [self.extract_skip_elements(item) for item in json_obj]
+            return [self._extract_skip_elements(item) for item in json_obj]
         return json_obj
 
     def get_wormbase_data(self, object_id, map_result=True):
         # Just used to shorten the call length to make code more readable
-        get_json = self.get_json_element
+        get_json = self._get_json_element
 
         if object_id is None:
             raise Exception("objectID cannot be null!")
     
-        rest_api_call_results = self.rest_api_call(object_id)
+        rest_api_call_results = self._rest_api_call(object_id)
         if "rest_api_error" in rest_api_call_results:
             return rest_api_call_results
         
@@ -182,9 +182,9 @@ class WormbaseAPI:
                     logger.err("parse_data() ERROR Did not expect to get here!!")
 
             # Post processing
-            results_dict = self.extract_empty_dict(results_dict)
-            results_dict = self.extract_skip_elements(results_dict)
-            results_dict = self.extract_single_element_lists(results_dict)
+            results_dict = self._extract_empty_dict(results_dict)
+            results_dict = self._extract_skip_elements(results_dict)
+            results_dict = self._extract_single_element_lists(results_dict)
             return results_dict
             
         ret_dict = parse_data(rest_api_call_results, self.results_doc_definition, ret_dict)
