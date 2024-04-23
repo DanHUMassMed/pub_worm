@@ -39,7 +39,7 @@ def test_entreze_esearch():
     dump_api_call(function_name, actual_result, "json")
 
     expected_result = "1"
-    assert 'query_key' in actual_result, "'query_key' not found in result"
+    assert 'query_key' in actual_result, "'query_key' found in result"
     assert actual_result['query_key'] == expected_result
 
 
@@ -52,7 +52,7 @@ def test_entreze_epost():
     dump_api_call(function_name, actual_result, "json")
 
     expected_result = "1"
-    assert 'query_key' in actual_result, "'query_key' not found in result"
+    assert 'query_key' in actual_result, "'query_key' found in result"
     assert actual_result['query_key'] == expected_result
 
 
@@ -89,6 +89,43 @@ def test_entreze_epost_efetch():
     assert len(actual_result) == 1, f"Expected exactly 1 result found but {len(actual_result)}"
     assert 'pub_abbr' in actual_result[0], "'pub_abbr' not found in result"
     assert actual_result[0]['pub_abbr'] == "Development",f"Expected 'pub_abbr' to equal Development but found {actual_result[0]['pub_abbr']}"
+
+def test_entreze_epost_efetch_full_article():
+    function_name = inspect.currentframe().f_code.co_name
+    data = ["PMC8253488","6358295"]
+    params= {'db': 'pmc'}
+
+    ncbi_api = EntrezAPI()
+    interm_result = ncbi_api.entreze_epost(data, params)
+
+    actual_result = {}
+    assert 'WebEnv' in interm_result, "Expected 'WebEnv' in interm_result"
+
+    actual_result = ncbi_api.entreze_efetch(interm_result)
+    dump_api_call(function_name, actual_result, "json")
+
+    #assert len(actual_result) == 1, f"Expected exactly 1 result found but {len(actual_result)}"
+    #assert 'pub_abbr' in actual_result[0], "'pub_abbr' not found in result"
+    #assert actual_result[0]['pub_abbr'] == "Development",f"Expected 'pub_abbr' to equal Development but found {actual_result[0]['pub_abbr']}"
+
+def test_entreze_esearch_to_elink():
+    function_name = inspect.currentframe().f_code.co_name
+    search_term = "Marnett L[au] AND (2019/01/01:2024/04/16[pdat])AND (vanderbilt[affil])"
+    esearch_params = {'term': search_term }
+
+    ncbi_api = EntrezAPI()
+    interm_result = ncbi_api.entreze_esearch(esearch_params)
+
+    expected_result = "1"
+    assert 'query_key' in interm_result, "'query_key' found in result"
+    assert interm_result['query_key'] == expected_result
+
+    actual_result = ncbi_api.entreze_elink_pmid_to_pmcid(interm_result)
+    dump_api_call(function_name, actual_result, "json")
+
+
+
+
 
 def test_entreze_esearch_efetch():
     function_name = inspect.currentframe().f_code.co_name

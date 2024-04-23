@@ -124,6 +124,7 @@ class EntrezAPI:
         api_result = self._rest_api_call(epost_params, data)
         ret_params = self._history_key_to_json(api_result)
         ret_params['count'] = len(data)
+        ret_params['db'] =  epost_params['db']
         return ret_params
 
     def entreze_pmid_summaries(self, params):
@@ -155,6 +156,55 @@ class EntrezAPI:
 
         return paper_summarys
 
+    def entreze_elink_pmid_to_pmcid(self, params):
+        logger.debug("Entering entreze_elink_pmid_to_pmcid!!")
+        self.function="elink"
+        elink_results = []
+
+        rec_count = int(params.get('count', 0))
+        restart = 0
+        entrez_params = {}
+        entrez_params['dbfrom'] = 'pubmed'
+        entrez_params['dbto'] = 'pmc'
+        entrez_params['linkname'] = 'pubmed_pmc'
+
+        required_params = ['query_key', 'WebEnv']
+        for param_name in required_params:
+            if param_name in params:
+                entrez_params[param_name] = params[param_name]
+            else:
+                logger.debug(f"Param '{param_name}' is required but not passed")
+                return None
+        logger.debug(f"XXXXXXXX entreze_elink_pmid_to_pmcid '{rec_count}'")
+        while rec_count > 0 :
+            params['restart'] = restart
+
+            api_result = self._rest_api_call(entrez_params)
+            soup = BeautifulSoup(api_result, "xml")
+
+            api_error = self._get_tag_text(soup,"rest_api_error")
+            if api_error:
+                logger.error("Error in entreze_elink_pmid_to_pmcid")
+                # Maybe throw and exception here
+                return None
+
+            root_element = soup.find()
+            if root_element.name == 'eLinkResult':
+                logger.debug("root_element == eLinkResult!!")
+
+
+                link_set_db = self._get_tag(soup, ['LinkSetDb'])
+                id_elements = link_set_db.find_all('Id')
+                id_numbers = [id_element.get_text(strip=True) for id_element in id_elements]
+                # Get PubmedArticleSet
+                elink_results += id_numbers
+
+
+            restart   +=200 # Increment record position by 200
+            rec_count -=200 # Pull the next 200 records or however many are remaining
+        
+        return elink_results
+
     def entreze_efetch(self, params):
         """
         Call entrez/eutils efetch
@@ -185,11 +235,16 @@ class EntrezAPI:
                 pubmed_articles = self._get_pubmed_articles(soup)
                 # Get PubmedArticleSet
                 efetch_results += pubmed_articles
+            elif root_element.name == 'pmc-articleset':
+                logger.debug("root_element == pmc-articleset!!")
+                pubmed_articles = self._get_pmc_articles(soup)
+                # Get PubmedArticleSet
+                efetch_results += pubmed_articles
+
 
             restart   +=200 # Increment record position by 200
             rec_count -=200 # Pull the next 200 records or however many are remaining
         
-
         return efetch_results
     
     ############# entrez/eutils Helper funtions #############
@@ -251,6 +306,36 @@ class EntrezAPI:
 
         return articles
 
+    def _get_pmc_articles(self, soup):
+        def clean_data(data):
+            data = data.encode("ascii", "ignore").decode()
+            data = data.replace('\n',' ')
+            data = data.replace('"','')
+            data = data.replace("\x84", " ")
+            return data
+        
+        articles = []
+        pmc_articles = soup.find_all('article')
+        for pmc_article in pmc_articles:
+            article = {}
+            article['pmid']      = self._get_tag_text(pmc_article, 'article-id', {'pub-id-type': 'pmid'})
+            article['pmcid']     = self._get_tag_text(pmc_article, 'article-id', {'pub-id-type': 'pmc'})
+            article['publisher'] = clean_data(self._get_tag_text(pmc_article, "publisher-name"))
+            article['tile']      = clean_data(self._get_tag_text(pmc_article, "article-title"))
+            article['abstract']  = clean_data(self._get_tag_text(pmc_article, "abstract"))
+            
+            body_tag = pmc_article.find('body')
+            body_text = ""
+            if body_tag:
+                body_text = body_tag.get_text(separator=' ', strip=True)
+            article['body']  = clean_data(body_text)
+          
+            articles.append(article)
+
+        return articles
+
+
+
     def _entreze_get_data(self, params, function):
         """
         Helper function to call _rest_api_call
@@ -305,6 +390,7 @@ class EntrezAPI:
                     tag = soup.find(tag_name, attribute)
                 else:
                     tag = soup.find(tag_name)
+
                 ret_val = tag.text if tag else ""
             except Exception as e:
                 print(f"Error finding tag in _get_tag_text: {e}")
