@@ -210,7 +210,7 @@ class EntrezAPI:
 
     def entreze_efetch(self, params):
         logger.debug("Entering entreze_efetch!!")
-        efetch_results = []
+        efetch_results = {'articles':[], 'references':[], 'authors':[]}
 
         rec_count = int(params.get('count', 0))
         restart = 0
@@ -225,14 +225,14 @@ class EntrezAPI:
             root_element = soup.find()
             if root_element.name == 'PubmedArticleSet':
                 logger.debug("root_element == PubmedArticleSet!!")
-                pubmed_articles = self._get_pubmed_articles(soup)
-                # Get PubmedArticleSet
-                efetch_results += pubmed_articles
+                efetch_results['articles']   += self._get_pubmed_articles(soup)
+                efetch_results['references'] += self._get_pubmed_references(soup)
+                efetch_results['authors']    += self._get_pubmed_authors(soup)
             elif root_element.name == 'pmc-articleset':
                 logger.debug("root_element == pmc-articleset!!")
                 pubmed_articles = self._get_pmc_articles(soup)
                 # Get PubmedArticleSet
-                efetch_results += pubmed_articles
+                efetch_results['articles'] += pubmed_articles
 
             restart   +=200 # Increment record position by 200
             rec_count -=200 # Pull the next 200 records or however many are remaining
@@ -290,7 +290,12 @@ class EntrezAPI:
             article['pub_year'] = self._get_tag_text(pub_date, "Year")
             article['pub_abbr'] = self._get_tag_text(journal, "ISOAbbreviation")
             article['title']    = self._get_tag_text(article_details, "ArticleTitle")
-            article['abstract'] = self._get_tag_text(abstract_details, "AbstractText")
+
+            abstract_text = ""
+            if abstract_details:
+                abstract_text = abstract_details.get_text(separator=' ', strip=True)
+            article['abstract']  = self._clean_data(abstract_text)
+
             if article['issn']:
                 article['impact_factor'] = get_impact_factor(article['issn'])
             if 'impact_factor' not in article:
@@ -300,13 +305,64 @@ class EntrezAPI:
 
         return articles
 
-    def _get_pmc_articles(self, soup):
-        def clean_data(data):
+    def _get_pubmed_authors(self, soup):
+            authors = []
+
+            pubmed_articles = soup.find_all('PubmedArticle')
+            # Iterate over the <PubmedArticle> elements
+            for pubmed_article in pubmed_articles:
+                medline_citation = self._get_tag(pubmed_article, ['MedlineCitation'])
+
+                source_pmid        = self._get_tag_text(medline_citation, "PMID")
+                author_list     = self._get_tag(pubmed_article, ['AuthorList'])
+                if author_list:
+                    article_authors = author_list.find_all('Author')
+                    for article_author in article_authors:
+                        author = {'source_pmid':source_pmid}
+                        author['last_name']  = self._get_tag_text(article_author, "LastName")
+                        author['first_name'] = self._get_tag_text(article_author, "ForeName")
+                        author['initials']   = self._get_tag_text(article_author, "Initials")
+                        author['orcid']      = self._get_tag_text(article_author, "Identifier", {"Source": "ORCID"})
+
+                        affiliation_info = self._get_tag(article_author, ['AffiliationInfo'])
+                        author['affiliation'] = ''
+                        if affiliation_info:
+                            author['affiliation'] = self._get_tag_text(affiliation_info, "Affiliation")
+
+                        authors.append(author)
+
+            return authors
+
+    def _get_pubmed_references(self, soup):
+            references = []
+
+            pubmed_articles = soup.find_all('PubmedArticle')
+            # Iterate over the <PubmedArticle> elements
+            for pubmed_article in pubmed_articles:
+                medline_citation = self._get_tag(pubmed_article, ['MedlineCitation'])
+
+                source_pmid        = self._get_tag_text(medline_citation, "PMID")
+                reference_list     = self._get_tag(pubmed_article, ['ReferenceList'])
+                if reference_list:
+                    article_references = reference_list.find_all('Reference')
+                    for article_reference in article_references:
+                        reference = {'source_pmid':source_pmid}
+                        reference['citation'] = self._get_tag_text(article_reference, "Citation")
+                        article_id_list       = self._get_tag(article_reference, ['ArticleIdList'])
+                        reference['pmid']     = self._get_tag_text(article_id_list, "ArticleId", {"IdType": "pubmed"})
+                        reference['pmc']      = self._get_tag_text(article_id_list, "ArticleId", {"IdType": "pmc"})
+                        references.append(reference)
+
+            return references
+
+    def _clean_data(self, data):
             data = data.encode("ascii", "ignore").decode()
             data = data.replace('\n',' ')
             data = data.replace('"','')
             data = data.replace("\x84", " ")
             return data
+    
+    def _get_pmc_articles(self, soup):
         
         articles = []
         pmc_articles = soup.find_all('article')
@@ -314,15 +370,15 @@ class EntrezAPI:
             article = {}
             article['pmid']      = self._get_tag_text(pmc_article, 'article-id', {'pub-id-type': 'pmid'})
             article['pmcid']     = self._get_tag_text(pmc_article, 'article-id', {'pub-id-type': 'pmc'})
-            article['publisher'] = clean_data(self._get_tag_text(pmc_article, "publisher-name"))
-            article['tile']      = clean_data(self._get_tag_text(pmc_article, "article-title"))
-            article['abstract']  = clean_data(self._get_tag_text(pmc_article, "abstract"))
+            article['publisher'] = self._clean_data(self._get_tag_text(pmc_article, "publisher-name"))
+            article['tile']      = self._clean_data(self._get_tag_text(pmc_article, "article-title"))
+            article['abstract']  = self._clean_data(self._get_tag_text(pmc_article, "abstract"))
             
             body_tag = pmc_article.find('body')
             body_text = ""
             if body_tag:
                 body_text = body_tag.get_text(separator=' ', strip=True)
-            article['body']  = clean_data(body_text)
+            article['body']  = self._clean_data(body_text)
           
             articles.append(article)
 

@@ -86,9 +86,9 @@ def test_entreze_epost_efetch():
     actual_result = ncbi_api.entreze_efetch(interm_result)
     dump_api_call(function_name, actual_result, "json")
 
-    assert len(actual_result) == 1, f"Expected exactly 1 result found but {len(actual_result)}"
-    assert 'pub_abbr' in actual_result[0], "'pub_abbr' not found in result"
-    assert actual_result[0]['pub_abbr'] == "Development",f"Expected 'pub_abbr' to equal Development but found {actual_result[0]['pub_abbr']}"
+    assert len(actual_result['articles']) == 1, f"Expected exactly 1 result found but {len(actual_result['articles'])}"
+    assert 'pub_abbr' in actual_result['articles'][0], "'pub_abbr' not found in result"
+    assert actual_result['articles'][0]['pub_abbr'] == "Development",f"Expected 'pub_abbr' to equal Development but found {actual_result['articles'][0]['pub_abbr']}"
 
 def test_entreze_epost_efetch_full_article():
     function_name = inspect.currentframe().f_code.co_name
@@ -122,10 +122,6 @@ def test_entreze_esearch_to_elink():
 
     actual_result = ncbi_api.entreze_elink_pmid_to_pmcid(interm_result)
     dump_api_call(function_name, actual_result, "json")
-
-
-
-
 
 def test_entreze_esearch_efetch():
     function_name = inspect.currentframe().f_code.co_name
