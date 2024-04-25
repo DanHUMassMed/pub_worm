@@ -30,6 +30,7 @@ class EntrezAPI:
 
 
     def _rest_api_call(self, params, data=None):
+        logger.debug(f"ZYYYYYZ {params} ")
         url_str = f"{self.base_url_str}/{self.function}.fcgi"
         params['retmode']='xml'
 
@@ -38,7 +39,7 @@ class EntrezAPI:
 
         query = '&'.join([f"{urllib.parse.quote(k, 'utf-8')}={urllib.parse.quote(v, 'utf-8')}" for k, v in params.items()])
         url_str = f"{url_str}?{query}"
-        logger.debug(url_str)
+        logger.debug(f"YYYY1 {url_str}")
 
         #self.max_retries = 3
         retry = 0
@@ -93,7 +94,9 @@ class EntrezAPI:
             soup = BeautifulSoup(api_result, "xml")
             # Pretty-print the XML content
             pretty_data = soup.prettify()
-            with open('http_response.xml', 'w', encoding="utf-8") as file:
+            milliseconds = int(round(time.time() * 1000))
+            timestamp_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()) + f".{milliseconds % 1000:03d}"
+            with open(f"http_response-{timestamp_str}.xml", 'w') as file:
                 file.write(pretty_data)
             logger.debug(pretty_data)
 
@@ -206,25 +209,15 @@ class EntrezAPI:
         return elink_results
 
     def entreze_efetch(self, params):
-        """
-        Call entrez/eutils efetch
-
-        Args:
-            params: The parameter to be used to call entrez/eutils.
-            function (str): The entrez function to call ['efetch' or 'esummary'].
-
-        Returns:
-            efetch_results: A List of Json Object that are the result of the call
-
-        Note: Currently only calling Pubmed
-        """
         logger.debug("Entering entreze_efetch!!")
         efetch_results = []
 
         rec_count = int(params.get('count', 0))
         restart = 0
         while rec_count > 0 :
-            params['restart'] = restart
+            params['retstart'] = str(restart)
+            params['retmax']  = '200'
+            logger.debug(f"ZYYYYY {params} ")
             soup = self._entreze_get_data(params, "efetch")
             if soup is None:
                 return efetch_results
@@ -241,7 +234,6 @@ class EntrezAPI:
                 # Get PubmedArticleSet
                 efetch_results += pubmed_articles
 
-
             restart   +=200 # Increment record position by 200
             rec_count -=200 # Pull the next 200 records or however many are remaining
         
@@ -251,7 +243,7 @@ class EntrezAPI:
     
     def _history_key_to_json(self, api_result):
         ret_params = {}
-        ret_params['function'] = self.function
+        ##ret_params['function'] = self.function
         # Parse the XML response using BeautifulSoup
         soup = BeautifulSoup(api_result, "xml")
         # Extract WebEnv and QueryKey
@@ -264,9 +256,9 @@ class EntrezAPI:
         if count:
             ret_params['count'] = count
         if ret_max:
-            ret_params['ret_max'] = ret_max
+            ret_params['retmax'] = int(ret_max)
         if ret_start:
-            ret_params['ret_start'] = ret_start
+            ret_params['retstart'] = int(ret_start)
 
         ret_params['query_key'] = query_key
         ret_params['WebEnv']    = web_env
@@ -289,10 +281,12 @@ class EntrezAPI:
             abstract_details = self._get_tag(article_details, ['Abstract'])
             journal          = self._get_tag(article_details, ['Journal'])
             pub_date         = self._get_tag(journal, ['JournalIssue', 'PubDate'])
+            article_id_list  = self._get_tag(pubmed_article, ['PubmedData', 'ArticleIdList'])
 
             article['pmid']     = self._get_tag_text(medline_citation, "PMID")
             article['issn']     = self._get_tag_text(journal, "ISSN", {"IssnType": "Print"})
             article['eissn']    = self._get_tag_text(journal, "ISSN", {"IssnType": "Electronic"})
+            article['pmc']      = self._get_tag_text(article_id_list, "ArticleId", {"IdType": "pmc"})
             article['pub_year'] = self._get_tag_text(pub_date, "Year")
             article['pub_abbr'] = self._get_tag_text(journal, "ISOAbbreviation")
             article['title']    = self._get_tag_text(article_details, "ArticleTitle")
@@ -352,6 +346,9 @@ class EntrezAPI:
         self.function = function
         entrez_params = {}
         entrez_params['db']  = params.get('db', 'pubmed')
+        entrez_params['retmax']  = params.get('retmax', '200')
+        entrez_params['retstart']  = params.get('retstart', '0')
+
 
         required_params = ['query_key', 'WebEnv']
         for param_name in required_params:
