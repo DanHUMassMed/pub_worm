@@ -96,8 +96,8 @@ class EntrezAPI:
             pretty_data = soup.prettify()
             milliseconds = int(round(time.time() * 1000))
             timestamp_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()) + f".{milliseconds % 1000:03d}"
-            with open(f"http_response-{timestamp_str}.xml", 'w') as file:
-                file.write(pretty_data)
+            #with open(f"http_response-{timestamp_str}.xml", 'w') as file:
+            #    file.write(pretty_data)
             logger.debug(pretty_data)
 
         return api_result
@@ -178,6 +178,7 @@ class EntrezAPI:
             else:
                 logger.debug(f"Param '{param_name}' is required but not passed")
                 return None
+            
         logger.debug(f"XXXXXXXX entreze_elink_pmid_to_pmcid '{rec_count}'")
         while rec_count > 0 :
             params['restart'] = restart
@@ -195,12 +196,12 @@ class EntrezAPI:
             if root_element.name == 'eLinkResult':
                 logger.debug("root_element == eLinkResult!!")
 
-
                 link_set_db = self._get_tag(soup, ['LinkSetDb'])
-                id_elements = link_set_db.find_all('Id')
-                id_numbers = [id_element.get_text(strip=True) for id_element in id_elements]
-                # Get PubmedArticleSet
-                elink_results += id_numbers
+                if link_set_db:
+                    id_elements = link_set_db.find_all('Id')
+                    id_numbers = [id_element.get_text(strip=True) for id_element in id_elements]
+                    # Get PubmedArticleSet
+                    elink_results += id_numbers
 
 
             restart   +=200 # Increment record position by 200
@@ -371,7 +372,7 @@ class EntrezAPI:
             article['pmid']      = self._get_tag_text(pmc_article, 'article-id', {'pub-id-type': 'pmid'})
             article['pmcid']     = self._get_tag_text(pmc_article, 'article-id', {'pub-id-type': 'pmc'})
             article['publisher'] = self._clean_data(self._get_tag_text(pmc_article, "publisher-name"))
-            article['tile']      = self._clean_data(self._get_tag_text(pmc_article, "article-title"))
+            article['title']      = self._clean_data(self._get_tag_text(pmc_article, "article-title"))
             article['abstract']  = self._clean_data(self._get_tag_text(pmc_article, "abstract"))
             
             body_tag = pmc_article.find('body')
