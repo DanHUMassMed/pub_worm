@@ -50,5 +50,13 @@
         "wbpt_name" : ["phenotype","label"],
         "wbpt_id"   : ["phenotype", "id"]
     }
+  },
+  "genomic_position":{
+    "genomic_position":{
+        "ROOT"   : ["genomic_position", "data"],
+        "start"  : ["start"],
+        "stop"   : ["stop"],
+        "seqname": ["seqname"]
+    }
   }
 }

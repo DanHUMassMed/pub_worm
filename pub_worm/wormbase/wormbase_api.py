@@ -6,6 +6,10 @@ import json
 import urllib.request
 import logging
 import logging.config
+
+import aiohttp
+import asyncio
+
 from . import load_wormbase_api_json
 
 try:
@@ -84,6 +88,47 @@ class WormbaseAPI:
                 
         return api_result
 
+    async def _async_rest_api_call(self, object_id):
+            url_str = f"{self.base_url_str}/{self.call_type}/{self.call_class}/{object_id}/{self.data_request}"
+            retry = 0
+            done = False
+            api_result = None
+            api_error = None
+
+            def handle_error(error_msg):
+                print(error_msg)
+                logger.debug(error_msg)
+                nonlocal done, retry, api_error
+                retry +=1
+                if retry >= self.max_retries:
+                    done = True
+                    api_error = error_msg
+
+
+            async with aiohttp.ClientSession() as session:
+                while not done:
+                    try:
+                        async with session.get(url_str) as response:
+                            if response.status == 200:
+                                done = True
+                                response_text = await response.text()
+                                api_result =  json.loads(response_text)
+                            elif response.status == 429:
+                                error_msg = f"Request limiter hit. Waiting 2 seconds [Retry: {retry + 1}]"
+                                handle_error(error_msg)
+                                await asyncio.sleep(2)
+                            else:
+                                error_msg = f"Failed to retrieve data. Retry- {retry + 1}, Code- {response.status}"
+                                handle_error(error_msg)
+                    except Exception as ex:
+                        logger.error(f"Error calling {url_str}: {str(ex)}")
+                        await asyncio.sleep(3)
+                        error_msg = f"Error on retry {retry + 1}: {str(ex)}"
+                        handle_error(error_msg)
+
+            return api_result if api_result else {"error": api_error}
+        
+    
     def _get_json_element(self, json_data, path):
         result = json_data
         try:
@@ -124,11 +169,57 @@ class WormbaseAPI:
         elif isinstance(json_obj, list):
             return [self._extract_skip_elements(item) for item in json_obj]
         return json_obj
-
-    def get_wormbase_data(self, object_id, map_result=True):
+    
+    def _parse_data(self, data_to_process, doc_definition, results_dict):
+        # data_request_item_nm="description" data_request_item=["fields", "concise_description","data","text"]
+        # data_request_item_nm="author"      data_request_item={ "ROOT": ["author"], "CONCAT": ["label"] }
         # Just used to shorten the call length to make code more readable
         get_json = self._get_json_element
+        for data_request_item_nm, data_request_item in doc_definition.items():
+            #logger.debug(f"{data_request_item_nm=}{data_request_item=}")
+            if isinstance(data_request_item, list):
+                data_request_item_path = data_request_item
+                widget_item = get_json(data_to_process, data_request_item_path)
+                if widget_item is not None:
+                    results_dict[data_request_item_nm] = widget_item
+            elif isinstance(data_request_item, dict):
+                #logger.debug(f"BEFORE {data_request_item=}, {data_request_item['ROOT']=}")
+                #pretty_data = json.dumps(data_to_process, indent=4)
+                #logger.debug(f"BEFORE {pretty_data}")
+                sub_data_to_process = get_json(data_to_process, data_request_item["ROOT"])
 
+                if sub_data_to_process is not None:
+                    #pretty_data = json.dumps(sub_data_to_process, indent=4)
+                    #logger.debug(f"AFTER {pretty_data}")
+                    if "CONCAT" in data_request_item:
+                        sub_results_str = ""
+                        for sub_data_item in sub_data_to_process:
+                            sub_results = self._parse_data(sub_data_item, data_request_item, {})
+                            if "CONCAT" in sub_results:
+                                sub_results_str +=str(f"{sub_results['CONCAT']}|")
+                        results_dict[data_request_item_nm] = sub_results_str[:-1]
+                        
+                    else:
+                        if isinstance(sub_data_to_process, dict):
+                            results_dict[data_request_item_nm] = self._parse_data(sub_data_to_process, data_request_item, {})
+                        else: #It is a list
+                            sub_results_list = []
+                            for sub_data_item in sub_data_to_process:
+                                list_item_to_append = self._parse_data(sub_data_item, data_request_item, {})
+                                sub_results_list.append(list_item_to_append)
+                            results_dict[data_request_item_nm] = sub_results_list
+
+            else:
+                logger.err("parse_data() ERROR Did not expect to get here!!")
+
+        # Post processing
+        results_dict = self._extract_empty_dict(results_dict)
+        results_dict = self._extract_skip_elements(results_dict)
+        results_dict = self._extract_single_element_lists(results_dict)
+        return results_dict
+
+
+    def get_wormbase_data(self, object_id, map_result=True):
         if object_id is None:
             raise Exception("objectID cannot be null!")
     
@@ -140,52 +231,21 @@ class WormbaseAPI:
             return rest_api_call_results
 
         ret_dict = {}
+        ret_dict = self._parse_data(rest_api_call_results, self.results_doc_definition, ret_dict)
+        return ret_dict
 
-        def parse_data(data_to_process, doc_definition, results_dict):
-            # data_request_item_nm="description" data_request_item=["fields", "concise_description","data","text"]
-            # data_request_item_nm="author"      data_request_item={ "ROOT": ["author"], "CONCAT": ["label"] }
-            for data_request_item_nm, data_request_item in doc_definition.items():
-                #logger.debug(f"{data_request_item_nm=}{data_request_item=}")
-                if isinstance(data_request_item, list):
-                    data_request_item_path = data_request_item
-                    widget_item = get_json(data_to_process, data_request_item_path)
-                    if widget_item is not None:
-                        results_dict[data_request_item_nm] = widget_item
-                elif isinstance(data_request_item, dict):
-                    #logger.debug(f"BEFORE {data_request_item=}, {data_request_item['ROOT']=}")
-                    #pretty_data = json.dumps(data_to_process, indent=4)
-                    #logger.debug(f"BEFORE {pretty_data}")
-                    sub_data_to_process = get_json(data_to_process, data_request_item["ROOT"])
+    async def async_get_wormbase_data(self, object_id, map_result=True):
 
-                    if sub_data_to_process is not None:
-                        #pretty_data = json.dumps(sub_data_to_process, indent=4)
-                        #logger.debug(f"AFTER {pretty_data}")
-                        if "CONCAT" in data_request_item:
-                            sub_results_str = ""
-                            for sub_data_item in sub_data_to_process:
-                                sub_results = parse_data(sub_data_item, data_request_item, {})
-                                if "CONCAT" in sub_results:
-                                    sub_results_str +=str(f"{sub_results['CONCAT']}|")
-                            results_dict[data_request_item_nm] = sub_results_str[:-1]
-                            
-                        else:
-                            if isinstance(sub_data_to_process, dict):
-                                results_dict[data_request_item_nm] = parse_data(sub_data_to_process, data_request_item, {})
-                            else: #It is a list
-                                sub_results_list = []
-                                for sub_data_item in sub_data_to_process:
-                                    list_item_to_append = parse_data(sub_data_item, data_request_item, {})
-                                    sub_results_list.append(list_item_to_append)
-                                results_dict[data_request_item_nm] = sub_results_list
+        if object_id is None:
+            raise Exception("objectID cannot be null!")
+    
+        rest_api_call_results = await self._async_rest_api_call(object_id)
+        if "rest_api_error" in rest_api_call_results:
+            return rest_api_call_results
+        
+        if not map_result:
+            return rest_api_call_results
 
-                else:
-                    logger.err("parse_data() ERROR Did not expect to get here!!")
-
-            # Post processing
-            results_dict = self._extract_empty_dict(results_dict)
-            results_dict = self._extract_skip_elements(results_dict)
-            results_dict = self._extract_single_element_lists(results_dict)
-            return results_dict
-            
-        ret_dict = parse_data(rest_api_call_results, self.results_doc_definition, ret_dict)
+        ret_dict = {}
+        ret_dict = self._parse_data(rest_api_call_results, self.results_doc_definition, ret_dict)
         return ret_dict

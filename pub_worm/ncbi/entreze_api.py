@@ -30,7 +30,6 @@ class EntrezAPI:
 
 
     def _rest_api_call(self, params, data=None):
-        logger.debug(f"ZYYYYYZ {params} ")
         url_str = f"{self.base_url_str}/{self.function}.fcgi"
         params['retmode']='xml'
 
@@ -39,7 +38,6 @@ class EntrezAPI:
 
         query = '&'.join([f"{urllib.parse.quote(k, 'utf-8')}={urllib.parse.quote(v, 'utf-8')}" for k, v in params.items()])
         url_str = f"{url_str}?{query}"
-        logger.debug(f"YYYY1 {url_str}")
 
         #self.max_retries = 3
         retry = 0
