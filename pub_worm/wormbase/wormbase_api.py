@@ -9,6 +9,9 @@ import logging.config
 
 import aiohttp
 import asyncio
+import concurrent.futures
+import multiprocessing
+import numpy as np
 
 from . import load_wormbase_api_json
 
@@ -249,3 +252,23 @@ class WormbaseAPI:
         ret_dict = {}
         ret_dict = self._parse_data(rest_api_call_results, self.results_doc_definition, ret_dict)
         return ret_dict
+
+
+    def get_wormbase_data_lst(self, object_id_list):
+        ret_lst = []
+        for object_id in object_id_list:
+            ret_val = self.get_wormbase_data(object_id)
+            ret_lst.append({object_id:ret_val})
+        return ret_lst
+
+    def get_wormbase_data_cpu(self, object_id_list, max_workers=2):
+        max_workers = min(max_workers or multiprocessing.cpu_count(), multiprocessing.cpu_count())
+        sub_lists = np.array_split(object_id_list, max_workers)
+
+        with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
+            futures = [executor.submit(self.get_wormbase_data_lst, args) for args in sub_lists]
+            results = [future.result() for future in futures]
+        
+        flattened_results = [item for sublist in results for item in sublist]
+        return flattened_results
+

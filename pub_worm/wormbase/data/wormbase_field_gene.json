@@ -48,7 +48,9 @@
     "phenotype_list": { 
         "ROOT" : ["phenotype", "data"],
         "wbpt_name" : ["phenotype","label"],
-        "wbpt_id"   : ["phenotype", "id"]
+        "wbpt_id"   : ["phenotype", "id"],
+        "evidence_allele" : ["evidence", "Allele", "text", "class"],
+        "evidence_rnai"   : ["evidence", "RNAi", "text", "class"]
     }
   },
   "genomic_position":{
