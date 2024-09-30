@@ -50,9 +50,8 @@ def download_gene_ids(wormbase_version, output_dir):
     # Remove the .gz file if it exists
     if os.path.exists(output_file_path):
         os.remove(output_file_path)
-        print(f"Removed: {output_file_path}")
-    else:
-        print(f"{output_file_path} does not exist")
+        
+    print(f"Unzipped: {output_file_path}")
         
 def extract_live_gene_ids(wormbase_version, source_dir):
     gene_ids = f"c_elegans.PRJNA13758.{wormbase_version}.geneIDs.txt"

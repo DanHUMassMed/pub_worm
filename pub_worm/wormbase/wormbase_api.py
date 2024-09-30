@@ -70,7 +70,7 @@ class WormbaseAPI:
                 else:
                     handle_error(f"Failed to retrieve data. | Retry- {retry +1} | Response code- {url.getcode()}")
             except Exception as ex:
-                aviod_logging_interpolation=f"Error while calling url_str {str(ex)}"
+                aviod_logging_interpolation=f"Error while calling {url_str} | {str(ex)}"
                 logger.error(aviod_logging_interpolation)
                 error_msg=f"Check if you have a connection!! | Retry- {retry+1} | Response msg- {str(ex)}"
                 time.sleep(3)
@@ -262,7 +262,7 @@ class WormbaseAPI:
         return ret_lst
 
     def get_wormbase_data_cpu(self, object_id_list, max_workers=2):
-        max_workers = min(max_workers or multiprocessing.cpu_count(), multiprocessing.cpu_count())
+        max_workers = min(max_workers, multiprocessing.cpu_count())
         sub_lists = np.array_split(object_id_list, max_workers)
 
         with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
