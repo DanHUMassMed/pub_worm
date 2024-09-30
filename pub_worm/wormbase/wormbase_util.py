@@ -81,3 +81,27 @@ def extract_live_gene_ids(wormbase_version, source_dir):
 
     print(f"Processed file saved to: {output_file}")
 
+
+def download_expr_graph(wormbase_version, output_dir):
+    expr_graph = f"c_elegans.PRJNA13758.{wormbase_version}.expr_graph.csv.gz"
+
+    base_url = f"https://downloads.wormbase.org/releases/{wormbase_version}/species/c_elegans/PRJNA13758"
+    file_url = f"{base_url}/annotation/{expr_graph}"
+
+    # Ensure output directory exists
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Download the file
+    output_file_path = os.path.join(output_dir, expr_graph)
+    _download_url(file_url, output_file_path)
+
+    # Unzip the file
+    with gzip.open(output_file_path, 'rb') as f_in:
+        with open(output_file_path.rstrip('.gz'), 'wb') as f_out:
+            shutil.copyfileobj(f_in, f_out)
+
+    # Remove the .gz file if it exists
+    if os.path.exists(output_file_path):
+        os.remove(output_file_path)
+        
+    print(f"Unzipped: {output_file_path}")
