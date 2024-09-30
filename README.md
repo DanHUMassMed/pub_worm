@@ -73,3 +73,9 @@ https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
             "retmode": "json",
             "rettype": "abstract"
         }
+
+## Pytest
+* Run a specific test from the command line 
+
+cd /Users/dan/Code/Python/pub_worm/tests
+export PYTHONPATH=..;python -m pytest  ncbi/test_entreze_api.py::test_entreze_esearch

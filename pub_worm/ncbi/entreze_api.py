@@ -130,30 +130,39 @@ class EntrezAPI:
 
     def entreze_pmid_summaries(self, params):
         paper_summarys = []
-        soup = self._entreze_get_data(params, "esummary")
-        if soup is None:
-            return paper_summarys
-        
-        # Extract information for each UID
-        for doc in soup.find_all("DocSum"):
-            uid         = self._get_tag_text(doc, "Id")
-            issn        = self._get_tag_text(doc, "Item", {"Name": "ISSN"})
-            essn        = self._get_tag_text(doc, "Item", {"Name": "ESSN"})
-            last_author = self._get_tag_text(doc, "Item", {"Name": "LastAuthor"})
-            pmc_id      = self._get_tag_text(doc, "Item", {"Name": "pmc"})
-            title       = self._get_tag_text(doc, "Item", {"Name": "Title"})
-            source      = self._get_tag_text(doc, "Item", {"Name": "Source"})
+        rec_count = int(params.get('count', 0))
+        restart = 0
+        while rec_count > 0 :
+            params['retstart'] = str(restart)
+            params['retmax']  = '200'
             
-            paper_summary = {
-                "uid"         : uid,
-                "issn"        : issn,
-                "essn"        : essn,
-                "last_author" : last_author,
-                "pmc_id"      : pmc_id,
-                "title"       : title,
-                "source"      : source
-            }
-            paper_summarys.append(paper_summary)
+            soup = self._entreze_get_data(params, "esummary")
+            if soup is None:
+                return paper_summarys
+            
+            # Extract information for each UID
+            for doc in soup.find_all("DocSum"):
+                uid         = self._get_tag_text(doc, "Id")
+                issn        = self._get_tag_text(doc, "Item", {"Name": "ISSN"})
+                essn        = self._get_tag_text(doc, "Item", {"Name": "ESSN"})
+                last_author = self._get_tag_text(doc, "Item", {"Name": "LastAuthor"})
+                pmc_id      = self._get_tag_text(doc, "Item", {"Name": "pmc"})
+                title       = self._get_tag_text(doc, "Item", {"Name": "Title"})
+                source      = self._get_tag_text(doc, "Item", {"Name": "Source"})
+                
+                paper_summary = {
+                    "uid"         : uid,
+                    "issn"        : issn,
+                    "essn"        : essn,
+                    "last_author" : last_author,
+                    "pmc_id"      : pmc_id,
+                    "title"       : title,
+                    "source"      : source
+                }
+                paper_summarys.append(paper_summary)
+                
+            restart   +=200 # Increment record position by 200
+            rec_count -=200 # Pull the next 200 records or however many are remaining
 
         return paper_summarys
 
@@ -228,7 +237,7 @@ class EntrezAPI:
                 efetch_results['references'] += self._get_pubmed_references(soup)
                 efetch_results['authors']    += self._get_pubmed_authors(soup)
             elif root_element.name == 'pmc-articleset':
-                logger.debug("root_element == pmc-articleset!!")
+                logger.debug("root_element == pmc-article set!!")
                 pubmed_articles = self._get_pmc_articles(soup)
                 # Get PubmedArticleSet
                 efetch_results['articles'] += pubmed_articles
