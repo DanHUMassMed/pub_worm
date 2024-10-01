@@ -4,6 +4,7 @@ import gzip
 import shutil
 import csv
 import json
+from bs4 import BeautifulSoup
 import pandas as pd
 
 # Get the most current Wormbase DB
@@ -17,6 +18,48 @@ def current_wormbase_version():
     else:
         return {'error':'something is not right'}
 
+
+
+def annotation_files_list(wormbase_version):
+    url = f"https://downloads.wormbase.org/releases/{wormbase_version}/species/c_elegans/PRJNA13758/annotation/"
+    
+    response = requests.get(url, timeout=10)
+    
+    # Check if the request was successful
+    if response.status_code != 200:
+        print(f"Failed to retrieve webpage. Status code: {response.status_code}")
+        return []
+    
+    # Parse HTML content using Beautiful Soup
+    soup = BeautifulSoup(response.content, 'html.parser')
+    
+    # Find all table rows
+    rows = soup.find_all('tr')
+    
+    # Initialize list to store file names
+    file_names = []
+    
+    # Iterate over table rows
+    for row in rows:
+        # Find the second table data (td) element in the row
+        td = row.find_all('td')
+        
+        # Check if the row has at least two td elements
+        if len(td) > 1:
+            file_name = td[1].find('a').text
+            file_names.append(file_name)
+    
+    # Remove the first element (Parent Directory)
+    file_names = file_names[1:]
+    
+    prefix = f"c_elegans.PRJNA13758.{wormbase_version}."
+    file_names = [name.replace(prefix, "") for name in file_names]
+    
+    return file_names
+
+
+
+    
    
 def _download_url(file_url, output_file_path):
     response = requests.get(file_url, stream=True)
@@ -28,30 +71,35 @@ def _download_url(file_url, output_file_path):
         print(f"Failed to download: {file_url} (status code: {response.status_code})")
     return
 
-    
-def download_gene_ids(wormbase_version, output_dir):
-    gene_ids = f"c_elegans.PRJNA13758.{wormbase_version}.geneIDs.txt.gz"
+def download_annotation_file(wormbase_version, file_nm, output_dir):
+    annotation_nm = f"c_elegans.PRJNA13758.{wormbase_version}.{file_nm}"
 
     base_url = f"https://downloads.wormbase.org/releases/{wormbase_version}/species/c_elegans/PRJNA13758"
-    file_url = f"{base_url}/annotation/{gene_ids}"
+    file_url = f"{base_url}/annotation/{annotation_nm}"
 
     # Ensure output directory exists
     os.makedirs(output_dir, exist_ok=True)
 
     # Download the file
-    output_file_path = os.path.join(output_dir, gene_ids)
+    output_file_path = os.path.join(output_dir, annotation_nm)
     _download_url(file_url, output_file_path)
 
-    # Unzip the file
-    with gzip.open(output_file_path, 'rb') as f_in:
-        with open(output_file_path.rstrip('.gz'), 'wb') as f_out:
-            shutil.copyfileobj(f_in, f_out)
+    ext_nm = annotation_nm[-3:]
+    if ext_nm == ".gz":
+        # Unzip the file
+        with gzip.open(output_file_path, 'rb') as f_in:
+            with open(output_file_path.rstrip('.gz'), 'wb') as f_out:
+                shutil.copyfileobj(f_in, f_out)
 
-    # Remove the .gz file if it exists
-    if os.path.exists(output_file_path):
-        os.remove(output_file_path)
-        
-    print(f"Unzipped: {output_file_path}")
+        # Remove the .gz file if it exists
+        if os.path.exists(output_file_path):
+            os.remove(output_file_path)
+            
+        print(f"Unzipped: {output_file_path}")
+    
+def download_gene_ids(wormbase_version, output_dir):
+        return download_annotation_file(wormbase_version, "geneIDs.txt.gz", output_dir)
+    
         
 def extract_live_gene_ids(wormbase_version, source_dir):
     gene_ids = f"c_elegans.PRJNA13758.{wormbase_version}.geneIDs.txt"
@@ -82,26 +130,5 @@ def extract_live_gene_ids(wormbase_version, source_dir):
     print(f"Processed file saved to: {output_file}")
 
 
-def download_expr_graph(wormbase_version, output_dir):
-    expr_graph = f"c_elegans.PRJNA13758.{wormbase_version}.expr_graph.csv.gz"
 
-    base_url = f"https://downloads.wormbase.org/releases/{wormbase_version}/species/c_elegans/PRJNA13758"
-    file_url = f"{base_url}/annotation/{expr_graph}"
-
-    # Ensure output directory exists
-    os.makedirs(output_dir, exist_ok=True)
-
-    # Download the file
-    output_file_path = os.path.join(output_dir, expr_graph)
-    _download_url(file_url, output_file_path)
-
-    # Unzip the file
-    with gzip.open(output_file_path, 'rb') as f_in:
-        with open(output_file_path.rstrip('.gz'), 'wb') as f_out:
-            shutil.copyfileobj(f_in, f_out)
-
-    # Remove the .gz file if it exists
-    if os.path.exists(output_file_path):
-        os.remove(output_file_path)
-        
-    print(f"Unzipped: {output_file_path}")
+    
