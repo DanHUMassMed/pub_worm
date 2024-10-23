@@ -283,6 +283,7 @@ class EntrezAPI:
         pubmed_articles = soup.find_all('PubmedArticle')
         # Iterate over the <PubmedArticle> elements
         for pubmed_article in pubmed_articles:
+            logger.debug(f"_get_pubmed_articles  {pubmed_article}")
             article = {}
             medline_citation = self._get_tag(pubmed_article, ['MedlineCitation'])
             article_details  = self._get_tag(medline_citation, ['Article'])
@@ -291,11 +292,15 @@ class EntrezAPI:
             pub_date         = self._get_tag(journal, ['JournalIssue', 'PubDate'])
             article_id_list  = self._get_tag(pubmed_article, ['PubmedData', 'ArticleIdList'])
 
-            article['pmid']     = self._get_tag_text(medline_citation, "PMID")
-            article['issn']     = self._get_tag_text(journal, "ISSN", {"IssnType": "Print"})
-            article['eissn']    = self._get_tag_text(journal, "ISSN", {"IssnType": "Electronic"})
-            article['pmc']      = self._get_tag_text(article_id_list, "ArticleId", {"IdType": "pmc"})
-            article['pub_year'] = self._get_tag_text(pub_date, "Year")
+            article['pmid']      = self._get_tag_text(medline_citation, "PMID")
+            article['issn']      = self._get_tag_text(journal, "ISSN", {"IssnType": "Print"})
+            article['eissn']     = self._get_tag_text(journal, "ISSN", {"IssnType": "Electronic"})
+            article['pmc']       = self._get_tag_text(article_id_list, "ArticleId", {"IdType": "pmc"})
+            article['doi']       = self._get_tag_text(article_id_list, "ArticleId", {"IdType": "doi"})
+            article['pub_year']  = self._get_tag_text(pub_date, "Year")
+            article['pub_month'] = self._get_tag_text(pub_date, "Month")
+            article['pub_day']   = self._get_tag_text(pub_date, "Day")
+
             article['pub_abbr'] = self._get_tag_text(journal, "ISOAbbreviation")
             article['title']    = self._get_tag_text(article_details, "ArticleTitle")
 
@@ -375,6 +380,7 @@ class EntrezAPI:
         articles = []
         pmc_articles = soup.find_all('article')
         for pmc_article in pmc_articles:
+            #logger.debug(f"_get_pmc_articles  {pmc_article}")
             article = {}
             article['pmid']      = self._get_tag_text(pmc_article, 'article-id', {'pub-id-type': 'pmid'})
             article['pmcid']     = self._get_tag_text(pmc_article, 'article-id', {'pub-id-type': 'pmc'})
@@ -439,7 +445,7 @@ class EntrezAPI:
     def _get_tag(self, soup, path_names):
         root = soup
         for path_name in path_names:
-            logger.debug(f"get_tag {type(root)} {root} {path_name}")
+            #logger.debug(f"get_tag {type(root)} {root} {path_name}")
             root = root.find(path_name, default='')
         return root
 
