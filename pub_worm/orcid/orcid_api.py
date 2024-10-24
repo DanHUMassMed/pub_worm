@@ -13,7 +13,7 @@ import requests
 try:
     logging.config.fileConfig('logging.config')
 except Exception:
-    logging.basicConfig(filename='pub_worm_orcid.log', level=logging.DEBUG)
+    pass
 
 # Create a logger object
 logger = logging.getLogger(__name__)

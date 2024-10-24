@@ -57,9 +57,6 @@ def annotation_files_list(wormbase_version):
     
     return file_names
 
-
-
-    
    
 def _download_url(file_url, output_file_path):
     response = requests.get(file_url, stream=True)
@@ -128,7 +125,4 @@ def extract_live_gene_ids(wormbase_version, source_dir):
     df_selected.to_csv(output_file, index=False)
 
     print(f"Processed file saved to: {output_file}")
-
-
-
-    
+ 

@@ -14,7 +14,7 @@ from pub_worm.impact_factor.impact_factor_lookup import get_impact_factor
 try:
     logging.config.fileConfig('logging.config')
 except Exception:
-    logging.basicConfig(filename='pub_worm_entrez.log', level=logging.DEBUG)
+    pass
 
 # Create a logger object
 logger = logging.getLogger(__name__)

@@ -18,7 +18,7 @@ from . import load_wormbase_api_json
 try:
     logging.config.fileConfig('logging.config')
 except Exception:
-    logging.basicConfig(filename='pub_worm_wormbase.log', level=logging.DEBUG)
+    pass
 
 # Create a logger object
 logger = logging.getLogger(__name__)
