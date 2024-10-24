@@ -10,6 +10,7 @@ result.json
 http_response.json
 http_response-*.xml
 .DS_Store
+.env
 
 redis-stable/
 dist/
