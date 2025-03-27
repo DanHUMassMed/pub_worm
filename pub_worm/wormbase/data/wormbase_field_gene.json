@@ -44,6 +44,21 @@
         }
       }
   },
+  "gene_ontology_ribbon" : {
+    "gene_ontology_ribbon" :{
+      "ROOT" : ["gene_ontology_ribbon", "data"],
+          "SKIP" : {
+            "ROOT" : ["slim"],
+              "go_term" : ["label"],
+              "go_id": ["id"]
+          },
+        "category":["aspect"],
+        "annotation_counts": {
+          "ROOT" : ["terms"],
+            "annotation_count":["annotation_count"]
+        }
+    }
+  },
   "phenotype": {
     "phenotype_list": { 
         "ROOT" : ["phenotype", "data"],

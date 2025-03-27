@@ -4,7 +4,7 @@ __pycache__/
 *$py.class
 
 
-
+delme*.json
 *.log
 result.json
 http_response.json

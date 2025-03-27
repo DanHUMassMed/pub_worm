@@ -1,6 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
-from datetime import datetime
+from datetime import datetime, timedelta
 import urllib.parse
 
 def biorxiv_most_recent_30__posts():
@@ -39,11 +39,11 @@ def biorxiv_recent_posts_filtered(keywords = ["caenorhabditis", "elegans"]):
     return articles
 
 
-def biorxiv_search(search_criteria="caenorhabditis elegans", from_date=None, to_date=None):
+def biorxiv_search(search_criteria="caenorhabditis elegans", days=1):
     result_dict = []  # Initialize an empty list to return
 
     try:
-        url = encode_biorxiv_search(search_criteria, from_date, to_date)
+        url = encode_biorxiv_search(search_criteria, days)
         response = requests.get(url)
 
         if response.status_code == 200:
@@ -71,17 +71,14 @@ def biorxiv_search(search_criteria="caenorhabditis elegans", from_date=None, to_
 
     return result_dict  # Return the result (could be empty if there was an error)
 
-def encode_biorxiv_search(search_criteria, from_date=None, to_date=None):
+def encode_biorxiv_search(search_criteria, days=1):
     base_url = "https://www.biorxiv.org/search/"
-    
-    # If dates are not passed, use today's date
-    if from_date is None or to_date is None:
-        today = datetime.today().strftime('%Y-%m-%d')
-        from_date = from_date or today
-        to_date = to_date or today
-    
+    today = datetime.today()
+    start_date = (today - timedelta(days=days)).strftime('%Y-%m-%d')
+    end_date = today.strftime('%Y-%m-%d')
+
     # Construct the query string with placeholders
-    query_string = f"abstract_title:{search_criteria} abstract_title_flags:match-any jcode:biorxiv limit_from:{from_date} limit_to:{to_date} numresults:75 sort:publication-date direction:ascending format_result:condensed"
+    query_string = f"abstract_title:{search_criteria} abstract_title_flags:match-any jcode:biorxiv limit_from:{start_date} limit_to:{end_date} numresults:75 sort:publication-date direction:ascending format_result:condensed"
     
     # Encode the query string
     encoded_query = urllib.parse.quote(query_string)
