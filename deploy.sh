@@ -1,6 +1,9 @@
 #!/bin/bash
+
+VERSION_FILE="pub_worm/__init__.py"  # Add this line
+
 # Get current version
-VERSION=$(grep "__version__" pub_worm/__init__.py | cut -d'"' -f2)
+VERSION=$(grep "__version__" $VERSION_FILE | cut -d'"' -f2)
 
 IFS='.' read -r -a PARTS <<< "$VERSION"
 MAJOR=${PARTS[0]}
@@ -13,7 +16,7 @@ NEW_VERSION="$MAJOR.$MINOR.$((PATCH + 1))"
 echo "Bumping version: $VERSION → $NEW_VERSION"
 
 # Update __init__.py
-sed -i '' "s/__version__ = .*/__version__ = \"$NEW_VERSION\"/" pub_worm/__init__.py
+sed -i '' "s/__version__ = .*/__version__ = \"$NEW_VERSION\"/" $VERSION_FILE
 
 rm -rf ./dist
 rm -rf ./pub_worm.egg-info
