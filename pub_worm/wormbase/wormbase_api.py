@@ -59,7 +59,7 @@ class WormbaseAPI:
 
         while not done:
             try:
-                url = urllib.request.urlopen(url_str)
+                url = urllib.request.urlopen(url_str, timeout=5)
                 if url.getcode() == 200:
                     done = True
                     response_text = url.read().decode('utf-8')
@@ -107,8 +107,8 @@ class WormbaseAPI:
                     done = True
                     api_error = error_msg
 
-
-            async with aiohttp.ClientSession() as session:
+            timeout = aiohttp.ClientTimeout(total=5)  # ⏱️ Add 5s timeout
+            async with aiohttp.ClientSession(timeout=timeout) as session:
                 while not done:
                     try:
                         async with session.get(url_str) as response:
