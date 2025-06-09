@@ -13,6 +13,7 @@ http_response-*.xml
 .env
 
 redis-stable/
+wormbase_data/
 dist/
 output/
 *.egg-info/
