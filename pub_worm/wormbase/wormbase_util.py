@@ -139,8 +139,29 @@ def _clean_sequence_id(sequence_id):
             return f"{base}.{isoform[:-1]}"
     return None
 
-def map_wormbase_ids(sequence_ids_file_path, working_dir_path=None):
-    if not working_dir_path:
+def _lookup_wormbase_id(sequence_id, gene_ids_dict):
+    sequence_id = sequence_id.upper()
+    found = gene_ids_dict.get(sequence_id)
+    if not found and sequence_id.startswith("PSEUDOGENE:"):
+        sequence_id = sequence_id[11:]
+        found = gene_ids_dict.get(sequence_id)
+    if not found and _clean_sequence_id(sequence_id):
+        sequence_id = _clean_sequence_id(sequence_id)
+        found = gene_ids_dict.get(sequence_id)
+    if not found and sequence_id.rindex('.') > -1:
+        sequence_id = sequence_id[0:sequence_id.rindex('.')]
+        found = gene_ids_dict.get(sequence_id)
+    if not found and _clean_sequence_id(sequence_id):
+        sequence_id = _clean_sequence_id(sequence_id)
+        found = gene_ids_dict.get(sequence_id)
+    if found:
+        return found
+    else:
+        return None
+
+
+def map_wormbase_ids(sequence_ids_file_path, gene_ids_df=None, working_dir_path=None):
+    if working_dir_path is None:
         working_dir_path = Path(sequence_ids_file_path).parent
     
     sequence_ids_df = pd.read_csv(sequence_ids_file_path)
@@ -148,16 +169,17 @@ def map_wormbase_ids(sequence_ids_file_path, working_dir_path=None):
         print("ID column is required in the input CSV")
         sys.exit(1)
     
-    wormbase_version = current_wormbase_version()
-    gene_ids_txt = download_gene_ids(wormbase_version, working_dir_path)
-    
-    gene_ids_csv = gene_ids_to_csv(wormbase_version, working_dir_path, status_live=False)
-    gene_ids_df = pd.read_csv(gene_ids_csv)
-    print(f"Created {wormbase_version} version of wormbase csv")
+    if gene_ids_df is None:
+        wormbase_version = current_wormbase_version()
+        gene_ids_txt = download_gene_ids(wormbase_version, working_dir_path)
+        
+        gene_ids_csv = gene_ids_to_csv(wormbase_version, working_dir_path, status_live=False)
+        gene_ids_df = pd.read_csv(gene_ids_csv)
+        print(f"Created {wormbase_version} version of wormbase csv")
 
-    # Remove the .txt
-    if os.path.exists(gene_ids_txt):
-        os.remove(gene_ids_txt)
+        # Remove the .txt
+        if os.path.exists(gene_ids_txt):
+            os.remove(gene_ids_txt)
             
     gene_ids_dict = {}
     for _, row in gene_ids_df.iterrows():
@@ -169,30 +191,17 @@ def map_wormbase_ids(sequence_ids_file_path, working_dir_path=None):
     not_found_ids = []
 
     for _, row in sequence_ids_df.iterrows():
-        sequence_id = str(row['ID']).upper()
-        found = gene_ids_dict.get(sequence_id)
-        if not found and sequence_id.startswith("PSEUDOGENE:"):
-            sequence_id = sequence_id[11:]
-            found = gene_ids_dict.get(sequence_id)
-        if not found and _clean_sequence_id(sequence_id):
-            sequence_id = _clean_sequence_id(sequence_id)
-            found = gene_ids_dict.get(sequence_id)
-        if not found and sequence_id.rindex('.') > -1:
-            sequence_id = sequence_id[0:sequence_id.rindex('.')]
-            found = gene_ids_dict.get(sequence_id)
-        if not found and _clean_sequence_id(sequence_id):
-            sequence_id = _clean_sequence_id(sequence_id)
-            found = gene_ids_dict.get(sequence_id)
-        if found:
-            found['Initial_Alias']=row['ID']
-            found_ids.append(found)
+        found_wormbase_id = _lookup_wormbase_id(str(row['ID']), gene_ids_dict)
+        if found_wormbase_id:
+            found_wormbase_id['Initial_Alias']=row['ID']
+            found_ids.append(found_wormbase_id)
         else:
             not_found_ids.append(row['ID'])
-            
+                        
     num_found = len(found_ids)
     num_not_found = len(not_found_ids)
     totals = num_found + num_not_found
-    percent_found = num_found / totals *100
+    percent_found = num_found / totals * 100
     
     print(f"Found     {num_found:>6,} genes.")
     print(f"Not Found {num_not_found:>6,} genes.")
