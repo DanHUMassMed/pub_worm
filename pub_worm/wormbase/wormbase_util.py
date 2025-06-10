@@ -148,7 +148,7 @@ def _lookup_wormbase_id(sequence_id, gene_ids_dict):
     if not found and _clean_sequence_id(sequence_id):
         sequence_id = _clean_sequence_id(sequence_id)
         found = gene_ids_dict.get(sequence_id)
-    if not found and sequence_id.rindex('.') > -1:
+    if not found and '.' in sequence_id:
         sequence_id = sequence_id[0:sequence_id.rindex('.')]
         found = gene_ids_dict.get(sequence_id)
     if not found and _clean_sequence_id(sequence_id):
@@ -174,7 +174,7 @@ def map_wormbase_ids(sequence_ids_file_path, gene_ids_df=None, working_dir_path=
         gene_ids_txt = download_gene_ids(wormbase_version, working_dir_path)
         
         gene_ids_csv = gene_ids_to_csv(wormbase_version, working_dir_path, status_live=False)
-        gene_ids_df = pd.read_csv(gene_ids_csv)
+        gene_ids_df = pd.read_csv(gene_ids_csv).fillna('')
         print(f"Created {wormbase_version} version of wormbase csv")
 
         # Remove the .txt
