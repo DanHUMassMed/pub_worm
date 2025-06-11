@@ -160,26 +160,42 @@ def _lookup_wormbase_id(sequence_id, gene_ids_dict):
         return None
 
 
-def map_wormbase_ids(sequence_ids_file_path, gene_ids_df=None, working_dir_path=None):
-    if working_dir_path is None:
-        working_dir_path = Path(sequence_ids_file_path).parent
+def map_wormbase_ids(sequence_ids_file_path, *, column_name='ID', gene_ids_df=None, working_dir_path=None):
+    # Ensure input path is Path object
+    sequence_ids_file_path = Path(sequence_ids_file_path)
+
+    # Load sequence ID file
+    try:
+        sequence_ids_df = pd.read_csv(sequence_ids_file_path)
+    except Exception as e:
+        print(f"Error reading file: {sequence_ids_file_path}\n{e}")
+        sys.exit(1)    
     
-    sequence_ids_df = pd.read_csv(sequence_ids_file_path)
-    if 'ID' not in sequence_ids_df.columns:
-        print("ID column is required in the input CSV")
+    # Set default working directory
+    if working_dir_path is None:
+        working_dir_path = sequence_ids_file_path.parent
+    else:
+        working_dir_path = Path(working_dir_path)
+    
+    if column_name not in sequence_ids_df.columns:
+        print(f"{column_name} column is required in the input CSV")
         sys.exit(1)
     
     if gene_ids_df is None:
         wormbase_version = current_wormbase_version()
-        gene_ids_txt = download_gene_ids(wormbase_version, working_dir_path)
-        
-        gene_ids_csv = gene_ids_to_csv(wormbase_version, working_dir_path, status_live=False)
-        gene_ids_df = pd.read_csv(gene_ids_csv).fillna('')
-        print(f"Created {wormbase_version} version of wormbase csv")
+        gene_ids_csv_file_nm = working_dir_path / f"c_elegans.PRJNA13758.{wormbase_version}.geneIDs.csv"
+        if not gene_ids_csv_file_nm.exists():
+            gene_ids_txt = download_gene_ids(wormbase_version, working_dir_path)            
+            gene_ids_csv_file_nm = gene_ids_to_csv(wormbase_version, working_dir_path, status_live=False)
+            print(f"Created {wormbase_version} version of wormbase csv")
 
-        # Remove the .txt
-        if os.path.exists(gene_ids_txt):
-            os.remove(gene_ids_txt)
+            # Clean up .txt file
+            txt_path = Path(gene_ids_txt)
+            if txt_path.exists():
+                txt_path.unlink()
+                
+        gene_ids_df = pd.read_csv(gene_ids_csv_file_nm).fillna('')
+
             
     gene_ids_dict = {}
     for _, row in gene_ids_df.iterrows():
@@ -191,12 +207,13 @@ def map_wormbase_ids(sequence_ids_file_path, gene_ids_df=None, working_dir_path=
     not_found_ids = []
 
     for _, row in sequence_ids_df.iterrows():
-        found_wormbase_id = _lookup_wormbase_id(str(row['ID']), gene_ids_dict)
-        if found_wormbase_id:
-            found_wormbase_id['Initial_Alias']=row['ID']
-            found_ids.append(found_wormbase_id)
+        input_id = str(row[column_name])
+        match = _lookup_wormbase_id(input_id, gene_ids_dict)
+        if match:
+            match['Initial_Alias'] = input_id
+            found_ids.append(match)
         else:
-            not_found_ids.append(row['ID'])
+            not_found_ids.append(input_id)
                         
     num_found = len(found_ids)
     num_not_found = len(not_found_ids)
@@ -207,10 +224,15 @@ def map_wormbase_ids(sequence_ids_file_path, gene_ids_df=None, working_dir_path=
     print(f"Not Found {num_not_found:>6,} genes.")
     print(f"Processed {totals:>6,} genes.  {percent_found:.2f}% matched.")
 
-    not_found_ids= sorted(not_found_ids)
-    df = pd.DataFrame(not_found_ids, columns=['ID'])
-    df.to_csv(working_dir_path / 'wormbase_ids_not_found.csv', index=False)
+    if not_found_ids:
+        not_found_ids = sorted(not_found_ids)
+        df = pd.DataFrame(not_found_ids, columns=['ID'])
+        output_path = working_dir_path / 'wormbase_ids_not_found.csv'
+        df.to_csv(output_path, index=False)
+        print(f"Not Found IDs saved at {output_path}")
     
     found_ids = sorted(found_ids, key=lambda d: d['Wormbase_Id'])
     df = pd.DataFrame(found_ids)
-    df.to_csv(working_dir_path / 'wormbase_ids_found.csv', index=False)
+    output_path = working_dir_path / 'wormbase_ids_found.csv'
+    df.to_csv(output_path, index=False)
+    print(f"Found IDs saved at {output_path}")

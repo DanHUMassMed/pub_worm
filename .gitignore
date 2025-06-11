@@ -18,3 +18,4 @@ dist/
 output/
 *.egg-info/
 
+run_map_wormbase_ids.py
