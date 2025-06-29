@@ -163,7 +163,8 @@ def _lookup_wormbase_id(sequence_id, gene_ids_dict):
 def map_wormbase_ids(sequence_ids_file_path, *, column_name='ID', gene_ids_df=None, working_dir_path=None):
     # Ensure input path is Path object
     sequence_ids_file_path = Path(sequence_ids_file_path)
-
+    file_name_no_ext = sequence_ids_file_path.stem
+    
     # Load sequence ID file
     try:
         sequence_ids_df = pd.read_csv(sequence_ids_file_path)
@@ -226,13 +227,14 @@ def map_wormbase_ids(sequence_ids_file_path, *, column_name='ID', gene_ids_df=No
 
     if not_found_ids:
         not_found_ids = sorted(not_found_ids)
-        df = pd.DataFrame(not_found_ids, columns=['ID'])
-        output_path = working_dir_path / 'wormbase_ids_not_found.csv'
-        df.to_csv(output_path, index=False)
+        not_found_df = pd.DataFrame(not_found_ids, columns=['ID'])
+        output_path = working_dir_path / f"{file_name_no_ext}_not_found.csv"
+        not_found_df.to_csv(output_path, index=False)
         print(f"Not Found IDs saved at {output_path}")
     
     found_ids = sorted(found_ids, key=lambda d: d['Wormbase_Id'])
-    df = pd.DataFrame(found_ids)
-    output_path = working_dir_path / 'wormbase_ids_found.csv'
-    df.to_csv(output_path, index=False)
+    found_df = pd.DataFrame(found_ids)
+    output_path = working_dir_path / f"{file_name_no_ext}_found.csv"
+    found_df.to_csv(output_path, index=False)
     print(f"Found IDs saved at {output_path}")
+    return found_df, not_found_df
