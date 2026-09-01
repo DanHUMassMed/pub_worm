@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pub-worm"
-version = "0.3.14"
+dynamic = ["version"]
 description = "Wormbase/PubMed/Ensembl/BioRxiv/ORCID API Access"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -45,6 +45,9 @@ dev = [
     "types-aiofiles>=24.1.0",
     "types-requests>=2.31.0",
 ]
+
+[tool.hatch.version]
+path = "pub_worm/__init__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["pub_worm"]
