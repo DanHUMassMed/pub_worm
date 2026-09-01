@@ -1,14 +1,16 @@
-import requests
-import aiohttp
 import asyncio
+
 import aiofiles
+import aiohttp
+import requests
+
 
 def get_sequence_region(start_position, end_position, chromosome, species = "caenorhabditis_elegans"):
     sequence = ""
     try:
         # Construct the URL for the Ensembl API
         url = f"https://rest.ensembl.org/sequence/region/{species}/{chromosome}:{start_position}..{end_position}?content-type=text/plain"
-        
+
         # Send the GET request
         response = requests.get(url, timeout=10)
 
@@ -28,7 +30,7 @@ def get_sequence_region(start_position, end_position, chromosome, species = "cae
 async def async_get_sequence_region(start_position, end_position, chromosome, species="caenorhabditis_elegans", max_retries=3):
     sequence = ""
     url = f"https://rest.ensembl.org/sequence/region/{species}/{chromosome}:{start_position}..{end_position}?content-type=text/plain"
-    
+
     retries = 0
 
     while retries < max_retries:
@@ -49,7 +51,7 @@ async def async_get_sequence_region(start_position, end_position, chromosome, sp
                             print("Rate limited. No Retry-After Waiting 2 seconds...")
                             asyncio.sleep(2)  # Wait for the time specified by the server
                             retries += 1  # Increment retry count
-                            
+
                     else:
                         print(f"Failed to retrieve sequence. Status code: {response.status}")
                         retries += 1
@@ -68,12 +70,12 @@ async def async_get_sequence_region(start_position, end_position, chromosome, sp
 def create_fasta(gene_nm, chromosome, sequence, path="."):
     # Define the filename based on the gene name
     filename = f"{path}/{gene_nm}.fasta"
-    
+
     # Open the file in write mode
     with open(filename, 'w') as file:
         # Write the header line
         file.write(f">{chromosome}\n")
-        
+
         # Write the sequence in lines of 60 characters
         for i in range(0, len(sequence), 60):
             file.write(sequence[i:i+60] + "\n")
@@ -82,14 +84,13 @@ def create_fasta(gene_nm, chromosome, sequence, path="."):
 async def async_create_fasta(gene_nm, chromosome, sequence, path="."):
     # Define the filename based on the gene name
     filename = f"{path}/{gene_nm}.fasta"
-    
+
     # Open the file in asynchronous write mode
     async with aiofiles.open(filename, 'w') as file:
         # Write the header line
         await file.write(f">{chromosome}\n")
-        
+
         # Write the sequence in lines of 60 characters
         for i in range(0, len(sequence), 60):
             await file.write(sequence[i:i+60] + "\n")
-    
-    
+

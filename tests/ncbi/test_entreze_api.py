@@ -1,8 +1,10 @@
-import pytest
 import inspect
-import os
 import json
+import os
+
+import pytest
 from bs4 import BeautifulSoup
+
 from pub_worm.ncbi.entreze_api import EntrezAPI
 
 DUMP_API_CALL = True
@@ -125,7 +127,7 @@ def test_entreze_esearch_to_elink():
 
 def test_entreze_esearch_efetch():
     function_name = inspect.currentframe().f_code.co_name
-    
+
     search_term = "Marnett L[au] AND (2019/01/01:2024/04/16[pdat])AND (vanderbilt[affil])"
     esearch_params = {'term': search_term }
 

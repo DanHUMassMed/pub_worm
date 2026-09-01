@@ -1,16 +1,16 @@
 '''
 WormbaseREST REST API for http://rest.wormbase.org/index.html
 '''
-import time
-import json
-import urllib.request
-import logging
-import logging.config
-
-import aiohttp
 import asyncio
 import concurrent.futures
+import json
+import logging
+import logging.config
 import multiprocessing
+import time
+import urllib.request
+
+import aiohttp
 import numpy as np
 
 from . import load_wormbase_api_json
@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 class WormbaseAPI:
 
     def __init__(self,call_type, call_class, data_request):
-        self.base_url_str = "https://wormbase.org/rest"
+        self.base_url_str = "https://parasite.wormbase.org/rest"
         self.max_retries = 3
         self.call_type = call_type
         self.call_class = call_class
@@ -37,7 +37,7 @@ class WormbaseAPI:
             self.results_doc_definition = {}
         else:
             self.results_doc_definition = self.wormbase_api_json[data_request]
-        
+
 
     def _rest_api_call(self, object_id):
         url_str = f"{self.base_url_str}/{self.call_type}/{self.call_class}/{object_id}/{self.data_request}"
@@ -83,12 +83,12 @@ class WormbaseAPI:
 
         if api_result is None:
             api_result = {"rest_api_error": api_error}
-        
+
         if logger.isEnabledFor(logging.DEBUG):
             pretty_data = json.dumps(api_result, indent=4)
             with open('http_response.json', 'w') as file:
                 file.write(pretty_data)
-                
+
         return api_result
 
     async def _async_rest_api_call(self, object_id):
@@ -130,8 +130,8 @@ class WormbaseAPI:
                         handle_error(error_msg)
 
             return api_result if api_result else {"error": api_error}
-        
-    
+
+
     def _get_json_element(self, json_data, path):
         result = json_data
         try:
@@ -149,7 +149,7 @@ class WormbaseAPI:
             return [self._extract_empty_dict(v) for v in json_obj if v and self._extract_empty_dict(v)]
         else:
             return json_obj
-    
+
     def _extract_single_element_lists(self, json_obj):
         if isinstance(json_obj, dict):
             for key, value in json_obj.items():
@@ -172,7 +172,7 @@ class WormbaseAPI:
         elif isinstance(json_obj, list):
             return [self._extract_skip_elements(item) for item in json_obj]
         return json_obj
-    
+
     def _parse_data(self, data_to_process, doc_definition, results_dict):
         # data_request_item_nm="description" data_request_item=["fields", "concise_description","data","text"]
         # data_request_item_nm="author"      data_request_item={ "ROOT": ["author"], "CONCAT": ["label"] }
@@ -201,7 +201,7 @@ class WormbaseAPI:
                             if "CONCAT" in sub_results:
                                 sub_results_str +=str(f"{sub_results['CONCAT']}|")
                         results_dict[data_request_item_nm] = sub_results_str[:-1]
-                        
+
                     else:
                         if isinstance(sub_data_to_process, dict):
                             results_dict[data_request_item_nm] = self._parse_data(sub_data_to_process, data_request_item, {})
@@ -225,11 +225,11 @@ class WormbaseAPI:
     def get_wormbase_data(self, object_id, map_result=True):
         if object_id is None:
             raise Exception("objectID cannot be null!")
-    
+
         rest_api_call_results = self._rest_api_call(object_id)
         if "rest_api_error" in rest_api_call_results:
             return rest_api_call_results
-        
+
         if not map_result:
             return rest_api_call_results
 
@@ -241,11 +241,11 @@ class WormbaseAPI:
 
         if object_id is None:
             raise Exception("objectID cannot be null!")
-    
+
         rest_api_call_results = await self._async_rest_api_call(object_id)
         if "rest_api_error" in rest_api_call_results:
             return rest_api_call_results
-        
+
         if not map_result:
             return rest_api_call_results
 
@@ -268,7 +268,7 @@ class WormbaseAPI:
         with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
             futures = [executor.submit(self.get_wormbase_data_lst, args) for args in sub_lists]
             results = [future.result() for future in futures]
-        
+
         flattened_results = [item for sublist in results for item in sublist]
         return flattened_results
 

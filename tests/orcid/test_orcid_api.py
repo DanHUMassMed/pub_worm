@@ -1,7 +1,9 @@
-import pytest
-import json
 import inspect
+import json
 import os
+
+import pytest
+
 from pub_worm.orcid.orcid_api import OrcidAPI
 
 DUMP_API_CALL = True
@@ -21,7 +23,7 @@ def test_get_orcid_data_from_orcid_id():
     orcid_api = OrcidAPI()
     actual_result = orcid_api.get_orcid_data(orcid_id)
     dump_api_call(function_name, actual_result)
-    
+
     expected_result = "Higgins"
     assert actual_result['person']['name']['family-name']['value'] == expected_result
 

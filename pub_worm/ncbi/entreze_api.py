@@ -1,14 +1,15 @@
 '''
 NCBI REST API for https://eutils.ncbi.nlm.nih.gov/entrez/eutils
 '''
+import logging
+import logging.config
 import os
 import time
 import urllib.parse
-import logging
-import logging.config
-import pandas as pd
-from bs4 import BeautifulSoup
+
 import requests
+from bs4 import BeautifulSoup
+
 from pub_worm.impact_factor.impact_factor_lookup import get_impact_factor
 
 try:
@@ -58,7 +59,7 @@ class EntrezAPI:
         while not done:
             try:
                 if data:
-                    post_data = { "id": ",".join(data) } 
+                    post_data = { "id": ",".join(data) }
                     response = requests.post(url_str, data=post_data, timeout=self.timeout)
                 else:
                     response = requests.get(url_str, timeout=self.timeout)
@@ -90,12 +91,7 @@ class EntrezAPI:
 
         if logger.isEnabledFor(logging.DEBUG):
             soup = BeautifulSoup(api_result, "xml")
-            # Pretty-print the XML content
             pretty_data = soup.prettify()
-            milliseconds = int(round(time.time() * 1000))
-            timestamp_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()) + f".{milliseconds % 1000:03d}"
-            #with open(f"http_response-{timestamp_str}.xml", 'w') as file:
-            #    file.write(pretty_data)
             logger.debug(pretty_data)
 
         return api_result
@@ -135,11 +131,11 @@ class EntrezAPI:
         while rec_count > 0 :
             params['retstart'] = str(restart)
             params['retmax']  = '200'
-            
+
             soup = self._entreze_get_data(params, "esummary")
             if soup is None:
                 return paper_summarys
-            
+
             # Extract information for each UID
             for doc in soup.find_all("DocSum"):
                 uid         = self._get_tag_text(doc, "Id")
@@ -149,7 +145,7 @@ class EntrezAPI:
                 pmc_id      = self._get_tag_text(doc, "Item", {"Name": "pmc"})
                 title       = self._get_tag_text(doc, "Item", {"Name": "Title"})
                 source      = self._get_tag_text(doc, "Item", {"Name": "Source"})
-                
+
                 paper_summary = {
                     "uid"         : uid,
                     "issn"        : issn,
@@ -160,7 +156,7 @@ class EntrezAPI:
                     "source"      : source
                 }
                 paper_summarys.append(paper_summary)
-                
+
             restart   +=200 # Increment record position by 200
             rec_count -=200 # Pull the next 200 records or however many are remaining
 
@@ -185,7 +181,7 @@ class EntrezAPI:
             else:
                 logger.debug(f"Param '{param_name}' is required but not passed")
                 return None
-            
+
         logger.debug(f"XXXXXXXX entreze_elink_pmid_to_pmcid '{rec_count}'")
         while rec_count > 0 :
             params['restart'] = restart
@@ -213,7 +209,7 @@ class EntrezAPI:
 
             restart   +=200 # Increment record position by 200
             rec_count -=200 # Pull the next 200 records or however many are remaining
-        
+
         return elink_results
 
     def entreze_efetch(self, params):
@@ -225,14 +221,13 @@ class EntrezAPI:
         while rec_count > 0 :
             params['retstart'] = str(restart)
             params['retmax']  = '200'
-            logger.debug(f"ZYYYYY {params} ")
+
             soup = self._entreze_get_data(params, "efetch")
             if soup is None:
                 return efetch_results
-            
+
             root_element = soup.find()
             if root_element.name == 'PubmedArticleSet':
-                logger.debug("root_element == PubmedArticleSet!!")
                 efetch_results['articles']   += self._get_pubmed_articles(soup)
                 efetch_results['references'] += self._get_pubmed_references(soup)
                 efetch_results['authors']    += self._get_pubmed_authors(soup)
@@ -244,11 +239,11 @@ class EntrezAPI:
 
             restart   +=200 # Increment record position by 200
             rec_count -=200 # Pull the next 200 records or however many are remaining
-        
+
         return efetch_results
-    
+
     ############# entrez/eutils Helper funtions #############
-    
+
     def _history_key_to_json(self, api_result):
         ret_params = {}
         ##ret_params['function'] = self.function
@@ -283,7 +278,6 @@ class EntrezAPI:
         pubmed_articles = soup.find_all('PubmedArticle')
         # Iterate over the <PubmedArticle> elements
         for pubmed_article in pubmed_articles:
-            logger.debug(f"_get_pubmed_articles  {pubmed_article}")
             article = {}
             medline_citation = self._get_tag(pubmed_article, ['MedlineCitation'])
             article_details  = self._get_tag(medline_citation, ['Article'])
@@ -374,9 +368,9 @@ class EntrezAPI:
             data = data.replace('"','')
             data = data.replace("\x84", " ")
             return data
-    
+
     def _get_pmc_articles(self, soup):
-        
+
         articles = []
         pmc_articles = soup.find_all('article')
         for pmc_article in pmc_articles:
@@ -387,13 +381,13 @@ class EntrezAPI:
             article['publisher'] = self._clean_data(self._get_tag_text(pmc_article, "publisher-name"))
             article['title']      = self._clean_data(self._get_tag_text(pmc_article, "article-title"))
             article['abstract']  = self._clean_data(self._get_tag_text(pmc_article, "abstract"))
-            
+
             body_tag = pmc_article.find('body')
             body_text = ""
             if body_tag:
                 body_text = body_tag.get_text(separator=' ', strip=True)
             article['body']  = self._clean_data(body_text)
-          
+
             articles.append(article)
 
         return articles
@@ -437,16 +431,16 @@ class EntrezAPI:
             logger.error("Error in _entreze_get_data")
             # Maybe throw and exception here
             return None
-        
+
         return soup
-    
+
     ############# Beautiful Soup XML Helper funtions #############
 
     def _get_tag(self, soup, path_names):
         root = soup
         for path_name in path_names:
-            #logger.debug(f"get_tag {type(root)} {root} {path_name}")
-            root = root.find(path_name, default='')
+            if root is not None:
+                root = root.find(path_name)
         return root
 
     def _get_tag_text(self, soup, tag_name, attribute=None):

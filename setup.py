@@ -1,10 +1,11 @@
 """
 Setup for pypi releases of pub_worm
 """
-from pub_worm import __version__
-from setuptools import setup, find_packages
 from pathlib import Path
 
+from setuptools import find_packages, setup
+
+from pub_worm import __version__
 
 this_directory = Path(__file__).parent
 long_description = (this_directory / "README.md").read_text()

@@ -1,13 +1,12 @@
 '''
 ORCID API https://pub.orcid.org/v3.0
 '''
-import os
-import time
-import urllib.parse
+import json
 import logging
 import logging.config
-import pandas as pd
-import json
+import os
+import time
+
 import requests
 
 try:
@@ -34,7 +33,7 @@ class OrcidAPI:
         if 'orcid_id' not in params:
              logger.error("'orcid_id' param required but not passed.")
              return api_result
-             
+
         if self.api_key is None:
              logger.error("'ORCID_ACCESS_TOKEN' is required but not found in env.")
              return api_result
@@ -99,17 +98,17 @@ class OrcidAPI:
             logger.debug(pretty_data)
 
         return api_result
-    
+
     def get_orcid_data(self, orcid_id, map_result_to=None):
 
         if orcid_id is None:
             raise Exception("orcid_id cannot be null!")
-    
+
         params = {'orcid_id':orcid_id}
         rest_api_call_results = self._rest_api_call(params)
         if "rest_api_error" in rest_api_call_results:
             return rest_api_call_results
-        
+
         if map_result_to is None:
             return rest_api_call_results
 

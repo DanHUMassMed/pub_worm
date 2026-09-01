@@ -1,5 +1,5 @@
 """
-    This script retrieves genomic sequences for promoter regions of given WormBase IDs using the Ensembl API. 
+    This script retrieves genomic sequences for promoter regions of given WormBase IDs using the Ensembl API.
     It:
         1. Reads a CSV file containing WormBase IDs, chromosome numbers, and genomic positions.
         2. Adjusts positions to extract 2000 bp promoter regions (upstream or downstream).
@@ -7,15 +7,17 @@
         4. Divides the input DataFrame into chunks and processes them concurrently using a ProcessPoolExecutor.
         5. Combines results and saves them to a new CSV file containing WormBase IDs and corresponding genomic sequences.
 """
+import asyncio
+import multiprocessing
 import os
 import sys
-import pandas as pd
-import asyncio
 from concurrent.futures import ProcessPoolExecutor
-import multiprocessing
+
+import pandas as pd
 
 sys.path.append("/Users/dan/Code/Python/pub_worm")
-from pub_worm.ensembl.ensembl_api import async_get_sequence_region, async_create_fasta
+from pub_worm.ensembl.ensembl_api import async_get_sequence_region
+
 
 def get_promoter_region(start_pos, stop_pos):
     if start_pos > stop_pos:
@@ -36,24 +38,24 @@ def run_async_get_sequence(promoter_start, promoter_stop, chromosome):
 # Function to process a chunk of the DataFrame
 def process_chunk(chunk):
     results = []
-    process_id = os.getpid() 
+    process_id = os.getpid()
     total_ids = len(chunk)
     for idx, row in enumerate(chunk.itertuples()):
         wormbase_id = row.Wormbase_Id
         chromosome = row.Chromosome
         start_pos = row.Start_Pos
         stop_pos = row.Stop_Pos
-        
+
         promoter_start, promoter_stop = get_promoter_region(start_pos, stop_pos)
         sequence = run_async_get_sequence(promoter_start, promoter_stop, chromosome)
         if sequence:
             results.append((wormbase_id,sequence))
         else:
             print(f"NO genomic_sequence for {wormbase_id}")
-    
+
         if (idx + 1) % 100 == 0 or (idx + 1) == total_ids:  # Also print for the final iteration
             print(f"Processed {idx + 1} Wormbase IDs from process {process_id}")
-        
+
     return results
 
 # Function to divide DataFrame into chunks of 5000 rows

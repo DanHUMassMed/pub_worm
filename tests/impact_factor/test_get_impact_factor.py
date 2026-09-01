@@ -1,4 +1,5 @@
 import pytest
+
 from pub_worm.impact_factor.impact_factor_lookup import get_impact_factor
 
 

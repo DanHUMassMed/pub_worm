@@ -1,7 +1,9 @@
-import pytest
-import json
 import inspect
+import json
 import os
+
+import pytest
+
 from pub_worm.wormbase.wormbase_api import WormbaseAPI
 
 DUMP_API_CALL = True
@@ -21,7 +23,7 @@ def test_from_class_gene_request_gene_ontology_data():
     wormbase_api = WormbaseAPI("field", "gene", "gene_ontology_summary")
     actual_result = wormbase_api.get_wormbase_data(wormbase_id)
     dump_api_call(function_name, actual_result)
-    
+
     expected_result = "GO:0022890"
     assert actual_result['gene_ontology_summary']['Molecular_function']['go_id'] == expected_result
 
@@ -32,7 +34,7 @@ def test_from_class_gene_request_references():
     wormbase_api = WormbaseAPI("field", "gene", "references")
     actual_result = wormbase_api.get_wormbase_data(wormbase_id)
     dump_api_call(function_name, actual_result)
-    
+
     expected_result = "WBPaper00043057"
     assert actual_result['references_list'][0]['wbp_id'] == expected_result
 
@@ -43,7 +45,7 @@ def test_from_class_gene_request_overview():
     wormbase_api = WormbaseAPI("widget", "gene", "overview")
     actual_result = wormbase_api.get_wormbase_data(wormbase_id)
     dump_api_call(function_name, actual_result)
-    
+
     expected_result = "sams-1"
     assert actual_result['wb_gene_name'] == expected_result
 
@@ -53,7 +55,7 @@ def test_from_class_paper_request_pmid():
     wormbase_api = WormbaseAPI("field", "paper", "pmid")
     actual_result = wormbase_api.get_wormbase_data(wormbase_paper_id)
     dump_api_call(function_name, actual_result)
-    
+
     expected_result = "16291722"
     assert actual_result['pm_id'] == expected_result
 
@@ -63,7 +65,7 @@ def test_from_class_paper_request_abstract():
     wormbase_api = WormbaseAPI("field", "paper", "abstract")
     actual_result = wormbase_api.get_wormbase_data(wormbase_paper_id)
     dump_api_call(function_name, actual_result)
-    
+
     expected_result = "Nephronophthisis (NPH) is a cystic kidney disorder"
     assert actual_result['wbp_abstract'].startswith(expected_result)
 
