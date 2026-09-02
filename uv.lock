@@ -1472,7 +1472,6 @@ wheels = [
 
 [[package]]
 name = "pub-worm"
-version = "0.3.14"
 source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },

@@ -135,7 +135,7 @@ def fetch_biorxiv_page(
     end_date: str,
     cursor: int = 0,
     session: Optional[requests.Session] = None,
-    timeout: int = 30,
+    timeout: int = 60,
 ) -> BioRxivResponse:
     """Fetch a single page (up to 30 items) from the bioRxiv REST API."""
     url = f"https://api.biorxiv.org/details/biorxiv/{start_date}/{end_date}/{cursor}/json"
@@ -160,6 +160,7 @@ def biorxiv_search(
     search_criteria: str = "caenorhabditis elegans",
     days: int = 1,
     verbose: bool = True,
+    timeout: int = 60,
 ) -> list[dict[str, str]]:
     """Search bioRxiv for papers published in the last `days` matching criteria via REST API."""
     today = datetime.today()
@@ -177,6 +178,7 @@ def biorxiv_search(
                 end_date=end_date,
                 cursor=cursor,
                 session=session,
+                timeout=timeout,
             )
 
             if not response_obj.is_ok or not response_obj.collection:
